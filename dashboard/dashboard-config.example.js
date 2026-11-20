@@ -12,6 +12,9 @@ var LOCAL = {
       { code: "790026", label: "Προς Αρτέμιδα", lines: [], daily: 2 }
     ],
     WORK: { label: "Γραφείο", address: "", lat: null, lon: null },
+    // Χάρτης λεωφορείων: πού ανοίγει, π.χ. { lat: 37.9755, lon: 23.7348, zoom: 14 }. null = χωράνε στάσεις και λεωφορεία.
+    // Για την τιμή: άνοιξε τον χάρτη, ζούμαρε όπως θες και τρέξε window.busMapView() στην κονσόλα.
+    BUSMAP_VIEW: null,
     VPN: { homeIspKeywords: [], appPackage: "com.nordvpn.android" }
   },
 

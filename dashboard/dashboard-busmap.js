@@ -4,7 +4,9 @@
    Χάρτης: Leaflet (unpkg) με πλακίδια Esri Dark Gray Canvas (χωρίς κλειδί). Φορτώνονται μόνο την πρώτη φορά που ανοίγει. */
 (function(){
 var BM = { refreshSec: 10, closeAfterMin: 2,
-  colors: ["#64d2ff", "#bf9cff", "#ff8fb1", "#8ab4f8", "#ffb27a", "#7fe0d0"] };   // χωρίς πράσινο/κίτρινο/κόκκινο: εδώ σημαίνουν κατάσταση
+  // ένα χρώμα ανά ΓΡΑΜΜΗ, με αποχρώσεις μακριά η μία από την άλλη (γαλάζιο, πορτοκαλί, φούξια, μωβ, τιρκουάζ).
+  // Χωρίς πράσινο/κίτρινο/κόκκινο: στο dashboard σημαίνουν κατάσταση. Η 2η κατεύθυνση της ίδιας γραμμής: διακεκομμένη.
+  colors: ["#4cc9ff", "#ff9a3c", "#ff5fb7", "#b48cff", "#3fe0c5", "#ffffff"] };
 var API = CONFIG.OASA_API, root = document.documentElement;
 var map = null, layers = null, busLayer = null, routes = null, stops = null, timer = null, closeTimer = null, loading = null;
 
@@ -18,7 +20,7 @@ css.textContent =
   ".bm-sub{font-size:.9375rem;color:var(--text-3);flex:0 0 auto;font-variant-numeric:tabular-nums}" +
   ".bm-legend{flex:1;display:flex;flex-wrap:wrap;gap:.375rem 1rem;font-size:.9375rem;color:var(--text-2);min-width:0}" +
   ".bm-legend span{white-space:nowrap}.bm-legend b{color:var(--text);font-weight:700;margin-right:.25rem}" +
-  ".bm-legend i{display:inline-block;width:1rem;height:.25rem;border-radius:2px;margin-right:.375rem;vertical-align:.1875rem}" +
+  ".bm-legend i{display:inline-block;width:1.25rem;height:.25rem;border-radius:2px;margin-right:.375rem;vertical-align:.1875rem}" +
   ".bm-close{min-width:2.75rem;min-height:2.75rem;padding:0 1.125rem;border:0;border-radius:999px;background:var(--text);color:#0b0f14;" +
   "font:inherit;font-size:1.0625rem;font-weight:700;cursor:pointer}.bm-close:active{background:#d5dbe3}" +
   "#bm-map{flex:1;min-height:0;background:#0e1116}" +
@@ -73,7 +75,7 @@ function loadRoutes(){
       }
       return null;
     }).filter(Boolean);
-    list.forEach(function(r, i){ r.color = BM.colors[i % BM.colors.length]; delete r.stops; });
+    list.forEach(function(r){ delete r.stops; });
     routes = list; store("busmap2", { routes: routes, stops: stops });
   });
 }
@@ -92,9 +94,21 @@ function build(){
   L.tileLayer(ESRI + "World_Dark_Gray_Reference/MapServer/tile/{z}/{y}/{x}", { maxZoom: 16 }).addTo(map);
   layers = L.layerGroup().addTo(map); busLayer = L.layerGroup().addTo(map);
 }
+function assignColors(){   // υπολογίζεται κάθε φορά, ώστε να ισχύει και για διαδρομές από το cache
+  var byLine = {}, n = 0;
+  routes.forEach(function(r){
+    if(!(r.line in byLine)) byLine[r.line] = { color: BM.colors[n % BM.colors.length], idx: n++, count: 0 };
+    var l = byLine[r.line]; r.color = l.color; r.dashed = l.count++ > 0; r.idx = l.idx;
+  });
+}
 function drawStatic(){
-  layers.clearLayers();
-  routes.forEach(function(r){ if(r.path.length) L.polyline(r.path, { color: r.color, weight: 4, opacity: .75 }).addTo(layers); });
+  layers.clearLayers(); assignColors();
+  // "ρίγες": κάθε επόμενη γραμμή πιο φαρδιά και από κάτω, ώστε στους κοινούς δρόμους να φαίνονται όλες
+  routes.slice().sort(function(a, b){ return (b.idx - a.idx) || (a.dashed - b.dashed); }).forEach(function(r){
+    if(!r.path.length) return;
+    var w = r.dashed ? 3.5 : 4 + 3.5 * r.idx;
+    L.polyline(r.path, { color: r.color, weight: w, opacity: 1, dashArray: r.dashed ? "2 9" : null, lineCap: "round", lineJoin: "round" }).addTo(layers);
+  });
   // στάσεις σε απόσταση κάτω από 200 μ. (π.χ. απέναντι πλευρές του δρόμου) γίνονται μία ετικέτα με το όνομα της στάσης
   var groups = [];
   stops.forEach(function(s){
@@ -105,7 +119,7 @@ function drawStatic(){
     var lab = g.items.length > 1 ? (g.items[0].name || g.items.map(function(s){ return s.label; }).join(" / ")) : g.items[0].label;
     L.marker([g.lat, g.lng], { icon: L.divIcon({ className: "", html: '<div class="bm-stop">' + esc(lab) + '</div>', iconSize: null, iconAnchor: [8, 12] }), zIndexOffset: 500 }).addTo(layers);
   });
-  $("bm-legend").innerHTML = routes.map(function(r){ return '<span><i style="background:' + r.color + '"></i><b>' + esc(r.line) + '</b>' + esc(shortDescr(r)) + '</span>'; }).join("");
+  $("bm-legend").innerHTML = routes.map(function(r){ return '<span><i style="' + (r.dashed ? 'background:repeating-linear-gradient(90deg,' + r.color + ' 0 3px,transparent 3px 7px)' : 'background:' + r.color) + '"></i><b>' + esc(r.line) + '</b>' + esc(shortDescr(r)) + '</span>'; }).join("");
 }
 function busIcon(r, heading){
   return L.divIcon({ className: "", iconSize: [36, 36], iconAnchor: [18, 18],
@@ -123,7 +137,7 @@ function refresh(){
       pts.push(ll);
     }); });
     $("bm-sub").textContent = (n ? n + (n === 1 ? " λεωφορείο" : " λεωφορεία") : "Κανένα λεωφορείο εν κινήσει") + " · " + hm(new Date());
-    // πρώτη φορά: να χωράνε οι στάσεις και όλα τα λεωφορεία, με μέγιστο ζουμ 15
+    // πρώτη φορά (μόνο αν δεν υπάρχει CONFIG.BUSMAP_VIEW): να χωράνε οι στάσεις και όλα τα λεωφορεία, με μέγιστο ζουμ 15
     if(firstFit){ firstFit = false; if(pts.length > 1) map.fitBounds(pts, { padding: [48, 48], maxZoom: 15 }); else if(pts.length) map.setView(pts[0], 14); }
   }).then(function(){
     // νυχτερινή οθόνη (χωρίς άγγιγμα): κλείσιμο του χάρτη
@@ -143,7 +157,11 @@ function open(){
   loadLeaflet().then(loadRoutes).then(function(){
     if(!isOpen()) return;
     if(!map) build();
-    msg(""); map.invalidateSize(); drawStatic(); refresh();
+    msg(""); map.invalidateSize(); drawStatic();
+    // σταθερή θέα από τη ρύθμιση: { lat, lon, zoom }
+    var v = CONFIG.BUSMAP_VIEW;
+    if(v && v.lat && v.lon){ map.setView([v.lat, v.lon], v.zoom || 14, { animate: false }); firstFit = false; }
+    refresh();
   }).catch(function(e){ msg("Ο χάρτης δεν φορτώθηκε (" + e.message + "). Δοκίμασε ξανά σε λίγο."); });
 }
 function close(){
@@ -155,6 +173,8 @@ box.addEventListener("touchstart", armClose, { passive: true });
 $("c-bus").addEventListener("click", open);
 $("c-bus").style.cursor = "pointer";
 window.closeBusMap = close;
+// για να βρεις την τιμή του BUSMAP_VIEW: άνοιξε τον χάρτη, ζούμαρε όπως θες, και διάβασε window.busMapView()
+window.busMapView = function(){ if(!map) return null; var c = map.getCenter(); return { lat: +c.lat.toFixed(4), lon: +c.lng.toFixed(4), zoom: map.getZoom() }; };
 // δοκιμή: ?busmap=1
 if(/[?&]busmap=1/.test(location.search)) setTimeout(open, 1500);
 })();
