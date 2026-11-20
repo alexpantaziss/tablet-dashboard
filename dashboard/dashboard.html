@@ -1,0 +1,1226 @@
+<!DOCTYPE html>
+<html lang="el">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<meta name="theme-color" content="#0b0f17">
+<title>Home Control Center</title>
+<!--
+  HOME CONTROL CENTER για Huawei MediaPad T3 10 (1280x800, landscape)
+
+  ΓΡΗΓΟΡΗ ΕΓΚΑΤΑΣΤΑΣΗ
+  1. Συμπλήρωσε το CONFIG πιο κάτω (στάση ΟΑΣΑ, διεύθυνση δουλειάς, πάροχος internet).
+  2. Αντέγραψε το αρχείο στο tablet, π.χ. στον φάκελο Download.
+  3. Εγκατάσταση Fully Kiosk Browser από το Play Store.
+     Start URL: file:///sdcard/Download/dashboard.html
+  4. Στο Fully: Keep Screen On, Fullscreen Mode, Launch on Boot.
+
+  Δοκιμή χωρίς internet ή ρυθμίσεις: πρόσθεσε ?demo=1 στο τέλος της διεύθυνσης.
+-->
+<style>
+  /* ------------------------------------------------------------------
+     Μονάδες: 1rem = 16 px όταν η σελίδα είναι 1280x800.
+     Στο MediaPad (density 213, DPR 1.33) το WebView βλέπει 960x600 CSS px,
+     οπότε το 1rem γίνεται 12 CSS px = 16 φυσικά pixel. Ίδιο φυσικό μέγεθος παντού.
+     Χωρίς blur, χωρίς σκιές, χωρίς συνεχή animation: το "γυαλί" είναι
+     ημιδιάφανο λευκό πάνω σε σταθερό (μία φορά ζωγραφισμένο) φόντο.
+     ------------------------------------------------------------------ */
+  :root{
+    --bg:#0b0e14;
+    --surface:rgba(255,255,255,.055);      /* κάρτες */
+    --surface-2:rgba(255,255,255,.085);    /* στοιχεία μέσα σε κάρτες */
+    --surface-press:rgba(255,255,255,.16);
+    --hairline:rgba(255,255,255,.10);
+    --text:#f2f4f7;      /* κύριο κείμενο */
+    --text-2:#b1bac6;    /* δευτερεύον */
+    --text-3:#98a3b2;    /* τρίτο επίπεδο: μόνο ώρες, πηγές */
+    --accent:#7cc0ff;    /* πληροφορία, βροχή, ενότητες */
+    --ok:#3ddc8f; --warn:#f7c350; --bad:#ff7d88;
+    --r:1.375rem; --r-sm:.875rem;
+  }
+  html{font-size:16px;font-size:min(1.25vw,2vh)}
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%;color:var(--text);overflow:hidden;background:var(--bg)}
+  body{
+    font-family:system-ui,Roboto,"Noto Sans","Segoe UI",Arial,sans-serif;
+    background:
+      radial-gradient(75rem 50rem at 0% 0%, rgba(58,98,168,.30), rgba(58,98,168,0) 62%),
+      radial-gradient(60rem 42rem at 100% 100%, rgba(28,124,120,.20), rgba(28,124,120,0) 60%),
+      var(--bg);
+    -webkit-font-smoothing:antialiased;
+    user-select:none;-webkit-user-select:none;-webkit-tap-highlight-color:transparent}
+  #app{height:100vh;display:flex;flex-direction:column;padding:.875rem 1.25rem 1.125rem;gap:.875rem}
+
+  /* Κεφαλίδα: το ρολόι είναι το πρώτο πράγμα που διαβάζεις από την άλλη άκρη του δωματίου */
+  header{display:flex;align-items:center;gap:1.5rem;flex:0 0 auto;padding:0 .25rem}
+  #clock{font-size:5.125rem;font-weight:500;letter-spacing:-.045em;line-height:.92;font-variant-numeric:tabular-nums}
+  .hd-mid{display:flex;flex-direction:column;gap:.25rem;flex:1;min-width:0}
+  #greet{font-size:1.75rem;font-weight:600;line-height:1.15}
+  #date{font-size:1.25rem;color:var(--text-2)}
+  .hd-right{display:flex;align-items:center;gap:.625rem}
+  .pill{display:inline-flex;align-items:center;gap:.5rem;min-height:3rem;padding:0 1.125rem;border-radius:999px;
+        background:var(--surface);border:1px solid var(--hairline);font-size:1.125rem;font-weight:500;color:var(--text)}
+  button.pill{cursor:pointer;font-family:inherit}
+  button.pill:active{background:var(--surface-press)}
+
+  /* Κουκκίδες κατάστασης: χρώμα ΚΑΙ σχήμα (εντάξει = γεμάτος κύκλος,
+     προσοχή = ρόμβος, σφάλμα = δαχτυλίδι), ώστε να μη στηρίζεται μόνο στο χρώμα */
+  .dot{width:.75rem;height:.75rem;border-radius:50%;background:#5f6a7a;display:inline-block;flex:0 0 auto}
+  .dot.ok{background:var(--ok)}
+  .dot.warn{background:var(--warn);border-radius:2px;transform:rotate(45deg) scale(.9)}
+  .dot.bad{background:transparent;border:3px solid var(--bad)}
+
+  /* Πλέγμα */
+  main{flex:1;display:grid;gap:.875rem;min-height:0}
+  /* Ημερήσια: καιρός | ειδήσεις + coffee corner | VPN + λεωφορεία κάτω δεξιά.
+     Αν ενεργοποιηθεί το Σπίτι ή στηθεί το Pi-hole, μπαίνουν ανάμεσα και τα λεωφορεία μικραίνουν. */
+  body.daily main{grid-template-columns:1.08fr 1.42fr .95fr;grid-template-rows:auto 1fr 12.75rem;
+    grid-template-areas:"weather news vpn" "weather news bus" "weather coffee bus"}
+  html:not(.no-home) body.daily main{grid-template-areas:"weather news vpn" "weather news home" "weather coffee bus"}
+  html:not(.no-pihole) body.daily main{grid-template-areas:"weather news vpn" "weather news pihole" "weather coffee bus"}
+  /* Πρωινή: καιρός | λεωφορεία | διαδρομή, coffee corner, ειδήσεις */
+  body.morning main{grid-template-columns:1fr 1.12fr 1fr;grid-template-rows:auto auto 1fr;
+    grid-template-areas:"weather bus route" "weather bus coffee" "weather bus news"}
+  #c-weather{grid-area:weather} #c-news{grid-area:news} #c-vpn{grid-area:vpn}
+  /* Ημερολόγιο στη θέση του VPN. Το VPN κρύβεται, ο κώδικάς του μένει. */
+  #c-cal{grid-area:vpn} #c-vpn{display:none !important} body.morning #c-cal{display:none}
+  #c-pihole{grid-area:pihole} #c-bus{grid-area:bus} #c-route{grid-area:route}
+  #c-home{grid-area:home} #c-coffee{grid-area:coffee}
+  /* Spotify: στη θέση του καφέ όσο παίζει μουσική. Η πρόοδος είναι λευκή, γιατί το πράσινο εδώ σημαίνει "εντάξει". */
+  #c-spot{grid-area:coffee;display:none;padding:1rem 1.25rem}
+  html.spot-on #c-spot{display:flex} html.spot-on #c-coffee{display:none}
+  .sp-wrap{display:flex;gap:1.125rem;align-items:center;flex:1;min-height:0}
+  .sp-art{flex:0 0 auto;height:100%;max-height:10rem;aspect-ratio:1/1;border-radius:.75rem;background:#1b222c center/cover no-repeat;
+    box-shadow:0 .375rem 1.25rem rgba(0,0,0,.35)}
+  .sp-main{flex:1;min-width:0;display:flex;flex-direction:column}
+  .sp-eye{display:flex;gap:.3125rem;font-size:.875rem;font-weight:600;color:var(--text-2);white-space:nowrap;overflow:hidden}
+  .sp-dev{color:var(--text-3);font-weight:400;overflow:hidden;text-overflow:ellipsis}
+  .sp-dev:not(:empty)::before{content:"· "}
+  .sp-title{font-size:1.375rem;font-weight:700;line-height:1.25;margin-top:.125rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .sp-artist{font-size:1.0625rem;color:var(--text-2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .sp-prog{display:flex;align-items:center;gap:.5rem;margin-top:.5rem;font-size:.8125rem;color:var(--text-3);font-variant-numeric:tabular-nums}
+  .sp-bar{flex:1;height:.25rem;border-radius:999px;background:rgba(255,255,255,.18);overflow:hidden}
+  .sp-bar i{display:block;height:100%;width:0;background:var(--text);border-radius:999px}
+  .sp-ctl{display:flex;align-items:center;justify-content:center;gap:1.25rem;margin-top:.25rem}
+  .sp-b{width:2.75rem;height:2.75rem;border:0;border-radius:999px;background:transparent;color:var(--text);display:inline-flex;align-items:center;justify-content:center;cursor:pointer;padding:0}
+  .sp-b svg{width:1.5rem;height:1.5rem;fill:currentColor}
+  .sp-b:active{background:var(--surface-press)}
+  .sp-pp{width:3rem;height:3rem;background:var(--text);color:#0b0f14}
+  .sp-pp svg{width:1.5rem;height:1.5rem}
+  .sp-pp:active{background:#d5dbe3}
+  /* Σύστημα (διάγνωση πηγών): κρυμμένο, ο κώδικας του μένει. */
+  #c-system{display:none}
+  body.daily #c-route{display:none}
+  body.morning #c-vpn, body.morning #c-pihole, body.morning #c-home{display:none}
+  /* Οι κλάσεις no-home / no-pihole μπαίνουν στο <html> από το script στο τέλος */
+  html.no-home #c-home{display:none}
+  html.no-pihole #c-pihole{display:none}
+  /* Ημερήσια: πιο μαζεμένα λεωφορεία */
+  body.daily .b-stop{font-size:1rem}
+  body.daily .b-row{padding:.5rem 0}
+  body.daily .b-line{font-size:1.375rem;min-width:3.75rem}
+  body.daily .b-desc{display:none}   /* η κατεύθυνση φαίνεται ήδη από τον τίτλο της στάσης */
+  body.daily .b-min{font-size:2.125rem;min-width:4.75rem;margin-left:auto}
+
+  .card{background:var(--surface);border:1px solid var(--hairline);border-radius:var(--r);
+        padding:1rem 1.375rem 1.125rem;display:flex;flex-direction:column;min-height:0;overflow:hidden}
+  .card h2{font-size:1.125rem;font-weight:600;color:var(--text-2);display:flex;align-items:baseline;gap:.5rem;
+           margin-bottom:.625rem;flex:0 0 auto;line-height:1.3}
+  .card h2 .sp{flex:1}
+  .card h2 small{font-size:1rem;font-weight:400;color:var(--text-3)}
+  .body{flex:1;min-height:0;overflow:hidden;font-size:1.125rem}
+  .muted{color:var(--text-2)} .dim{color:var(--text-3)}
+  .err{color:var(--warn);font-size:1.125rem;line-height:1.4}
+
+  /* Καιρός */
+  .w-now{display:flex;align-items:center;gap:.875rem}
+  .w-ico{font-size:3.75rem;line-height:1}
+  .w-now > div:last-child{min-width:0}
+  .w-temp{font-size:5.25rem;font-weight:500;line-height:.9;letter-spacing:-.045em;font-variant-numeric:tabular-nums}
+  .w-desc{font-size:1.375rem;font-weight:600;line-height:1.2}
+  .w-feels{font-size:1.125rem;color:var(--text-2);margin-top:.25rem}
+  .w-stats{display:grid;grid-template-columns:1fr 1fr 1fr;gap:.5rem;margin:.75rem 0 .625rem}
+  .w-stat{background:var(--surface-2);border-radius:var(--r-sm);padding:.4375rem .625rem .5rem;min-width:0}
+  .w-stat b{display:block;font-size:1.375rem;font-weight:600;white-space:nowrap;line-height:1.3}
+  .w-stat span{font-size:.9375rem;color:var(--text-2);white-space:nowrap}
+  .w-tip{background:rgba(124,192,255,.13);border:1px solid rgba(124,192,255,.30);color:#dbeeff;
+         border-radius:var(--r-sm);padding:.625rem .875rem;font-size:1.125rem;font-weight:500;margin-bottom:.75rem;line-height:1.35}
+  .w-tip.warm{background:rgba(247,195,80,.12);border-color:rgba(247,195,80,.32);color:#ffeac0}
+  .w-hours{display:flex;gap:.25rem;margin-bottom:.625rem}
+  .w-h{flex:1;text-align:center}
+  .w-h .t{font-size:1rem;color:var(--text-2);font-variant-numeric:tabular-nums}
+  .w-h .i{font-size:1.375rem;margin:.125rem 0;line-height:1.3}
+  .w-h .v{font-size:1.1875rem;font-weight:600}
+  /* το ύψος της μπάρας το βάζει το JS σε px (έως 50px), γι' αυτό εδώ μένει σε px */
+  .w-h .bar{height:50px;display:flex;align-items:flex-end;justify-content:center;margin-top:.25rem}
+  .w-h .bar i{display:block;width:56%;background:var(--accent);border-radius:3px 3px 0 0;min-height:2px}
+  .w-h .p{font-size:.875rem;color:var(--accent);font-weight:500;margin-top:.125rem}
+  .w-days{display:flex;flex-direction:column;gap:.1875rem}
+  .w-d{display:grid;grid-template-columns:4.75rem 2rem 1fr 4.75rem;align-items:center;font-size:1.1875rem;gap:.375rem;line-height:1.3}
+  .w-d .n{color:var(--text-2)}
+  .w-d .r{color:var(--accent);font-size:1.0625rem;text-align:right;font-variant-numeric:tabular-nums}
+  .w-d .mm b{font-weight:600}
+  .w-sun{font-size:1rem;color:var(--text-3);margin-top:.375rem}
+
+  /* Ειδήσεις: λιγότεροι, μεγαλύτεροι τίτλοι. Όσοι δεν χωράνε κρύβονται ολόκληροι,
+     αντί να κόβονται στη μέση. (Το h3 είναι το 1ο παιδί, άρα n+5 = από τον 4ο τίτλο.) */
+  .n-sec{margin-bottom:.75rem}
+  .n-sec h3{font-size:1rem;color:var(--accent);font-weight:700;margin-bottom:.125rem}
+  .n-item{padding:.5625rem 0;border-top:1px solid var(--hairline);font-size:1.3125rem;font-weight:500;line-height:1.28}
+  .n-sec h3 + .n-item{border-top:0}
+  .n-item:active, .n-item.sending{background:rgba(255,255,255,.06)}
+  .n-item .meta{font-size:1rem;font-weight:400;color:var(--text-3);margin-top:.1875rem}
+  /* κάθε τίτλος το πολύ 2 γραμμές με "…", ώστε να μη σπρώχνει τους υπόλοιπους έξω */
+  .n-t{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+  /* Η στήλη ειδήσεων κυλάει με το δάχτυλο. Το σβήσιμο στο κάτω μέρος δείχνει ότι υπάρχουν κι άλλοι τίτλοι. */
+  #n-body{overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;
+    -webkit-mask-image:linear-gradient(to bottom,#000 calc(100% - 2.5rem),transparent);mask-image:linear-gradient(to bottom,#000 calc(100% - 2.5rem),transparent)}
+  #n-body::-webkit-scrollbar{width:0;height:0}
+  #n-body .n-fade{padding-bottom:2rem}
+  body.morning .n-item{font-size:1.0625rem;padding:.375rem 0}
+  body.morning .n-item .meta{font-size:.9375rem}
+  .n-fade{animation:fade .5s ease}
+  @keyframes fade{from{opacity:0}to{opacity:1}}
+
+  /* Μικρές κάρτες κατάστασης */
+  .st-big{display:flex;align-items:center;gap:.75rem;font-size:1.875rem;font-weight:600;line-height:1.15;margin-bottom:.375rem}
+  .st-big .dot{width:1.0625rem;height:1.0625rem}
+  .st-big .dot.bad{border-width:4px}
+  .kv{font-size:1rem;color:var(--text-2);line-height:1.4}
+  .kv b{color:var(--text);font-weight:600;word-break:break-all}  /* IPv6 αναδιπλώνεται */
+
+  /* Σπίτι: μεγάλα κουμπιά που ανοίγουν τις εφαρμογές των συσκευών */
+  .home-grid{display:grid;grid-template-columns:1fr 1fr;gap:.5rem}
+  .home-grid .btn{justify-content:flex-start;gap:.5rem;min-height:2.875rem;padding:0 .75rem;font-size:1.0625rem;white-space:nowrap;overflow:hidden}
+  .home-grid .btn .ic{font-size:1.375rem;line-height:1}
+  .home-grid .btn.missing{opacity:.45}
+
+  /* Coffee corner: μήνυμα ανάλογα με ώρα/μέρα/θερμοκρασία, και λέξη της ημέρας */
+  .cf{display:flex;gap:1rem;height:100%}
+  .cf > div{flex:1;min-width:0}
+  .cf-sep{flex:0 0 1px !important;background:var(--hairline)}
+  .cf-msg{font-size:1.25rem;font-weight:600;line-height:1.25;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+  .cf-sub{font-size:1rem;color:var(--text-2);line-height:1.35;margin-top:.375rem;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+  .cf-lbl{font-size:.9375rem;font-weight:700;color:var(--accent)}
+  .cf-word{font-size:1.5rem;font-weight:700;line-height:1.2;margin:.125rem 0 .25rem}
+  .cf-mean{font-size:1rem;color:var(--text-2);line-height:1.35;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+  body.morning .cf{flex-direction:column;gap:.625rem}
+  body.morning .cf-sep{flex:0 0 1px !important}
+  body.morning .cf-msg{font-size:1.25rem}
+  body.morning .cf-word{font-size:1.25rem}
+  .btn{display:inline-flex;align-items:center;justify-content:center;gap:.5rem;min-height:3rem;padding:0 1.125rem;
+       border-radius:var(--r-sm);background:var(--surface-2);border:1px solid var(--hairline);color:var(--text);
+       font-size:1.125rem;font-weight:500;text-decoration:none;font-family:inherit;cursor:pointer}
+  .btn:active{background:var(--surface-press)}
+  .ph-grid{display:grid;grid-template-columns:1fr 1fr;gap:.25rem .875rem;font-size:1rem;color:var(--text-2);line-height:1.25}
+  .ph-grid b{display:block;font-size:1.5rem;color:var(--text);font-weight:600;font-variant-numeric:tabular-nums}
+  .sys-list{font-size:1rem;line-height:1.35;color:var(--text-2)}
+  .sys-list .row{display:flex;align-items:center;gap:.625rem}
+  .sys-list .row span:last-child{margin-left:auto;color:var(--text-3);font-variant-numeric:tabular-nums}
+
+  /* ΟΑΣΑ: το βασικό του πρωινού, τα λεπτά είναι το μεγαλύτερο νούμερο της οθόνης μετά το ρολόι */
+  .b-stop{font-size:1.125rem;color:var(--text-2);margin-bottom:.25rem}
+  .b-row{display:flex;align-items:center;gap:.875rem;padding:.6875rem 0;border-top:1px solid var(--hairline)}
+  .b-stop + .b-row{border-top:0}
+  .b-line{min-width:4.5rem;text-align:center;font-weight:700;font-size:1.625rem;padding:.3125rem .5rem;border-radius:.75rem;
+          background:rgba(124,192,255,.16);color:#d3e9ff;font-variant-numeric:tabular-nums}
+  .b-desc{flex:1;font-size:1.0625rem;color:var(--text-2);line-height:1.3;min-width:0;overflow:hidden;
+          display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
+  .b-min{font-size:2.75rem;font-weight:600;line-height:1;font-variant-numeric:tabular-nums;text-align:right;min-width:6rem;white-space:nowrap}
+  .b-min small{font-size:1.0625rem;color:var(--text-2);font-weight:500}
+  .b-min.soon{color:var(--ok)}
+  .b-empty{font-size:1.125rem;color:var(--text-2);padding:1.25rem 0;line-height:1.45}
+
+  /* Διαδρομή */
+  .r-dest{font-size:1.3125rem;margin-bottom:.875rem;line-height:1.35}
+  .r-btns{display:grid;grid-template-columns:1fr 1fr;gap:.625rem}
+  .r-btns .btn{min-height:4.25rem;padding:0 .75rem;font-size:1.25rem;font-weight:600;white-space:nowrap}
+  .btn.gmaps{background:rgba(61,220,143,.15);border-color:rgba(61,220,143,.34)}
+  .btn.waze{background:rgba(124,192,255,.15);border-color:rgba(124,192,255,.34)}
+
+  /* Νυχτερινό χαμήλωμα και ειδοποίηση */
+  #dim{position:fixed;top:0;right:0;bottom:0;left:0;background:#000;opacity:0;pointer-events:none;transition:opacity 2s}
+  body.night #dim{opacity:.55}
+  #toast{position:fixed;left:50%;bottom:1.25rem;transform:translateX(-50%);background:#232a35;border:1px solid var(--hairline);
+         padding:.75rem 1.25rem;border-radius:var(--r-sm);font-size:1.125rem;opacity:0;transition:opacity .4s;pointer-events:none}
+  #toast.show{opacity:1}
+
+  /* Ποιότητα αέρα, UV, γύρη: δεύτερη σειρά στην κάρτα Καιρός */
+  .w-stats.air{margin-top:-.125rem}
+  .w-stat .lv{display:flex;align-items:center;gap:.4375rem}
+  .w-stat .lv .dot{width:.625rem;height:.625rem}
+  .w-stat .lv .dot.bad{border-width:2px}
+  .w-stat span{display:block;overflow:hidden;text-overflow:ellipsis}
+
+  /* Ημερολόγιο: ώρα σε σταθερή στήλη, τίτλος σε μία γραμμή, το τρέχον με κουκκίδα + "τώρα" */
+  .cal-list{display:flex;flex-direction:column}
+  /* μικρός μήνας στην κύρια οθόνη (πατιέται: ανοίγει η οθόνη 3) */
+  #cal-mini{cursor:pointer;margin:-.125rem 0 .375rem;border-radius:var(--r-sm)}
+  #cal-mini:active{background:rgba(255,255,255,.04)}
+  .mm-t{font-size:.875rem;font-weight:700;color:var(--accent);margin-bottom:.125rem}
+  .mm-g{display:grid;grid-template-columns:repeat(7,1fr);text-align:center;row-gap:.0625rem}
+  .mm-g b{font-size:.6875rem;font-weight:600;color:var(--text-3);padding-bottom:.125rem}
+  .mm-g span{position:relative;font-size:.8125rem;font-weight:500;line-height:1.5rem;font-variant-numeric:tabular-nums;color:var(--text)}
+  .mm-g span.we{color:var(--text-2)}
+  .mm-g span.past{color:var(--text-3)}
+  .mm-g span.td{color:#06121f;font-weight:700}
+  .mm-g span.td::before{content:"";position:absolute;left:50%;top:50%;width:1.5rem;height:1.5rem;margin:-.75rem 0 0 -.75rem;border-radius:999px;background:var(--accent);z-index:-1}
+  .mm-g span{z-index:0}
+  .mm-g span i{position:absolute;left:50%;bottom:-.0625rem;width:.25rem;height:.25rem;margin-left:-.125rem;border-radius:999px}
+  .cal-row{display:grid;grid-template-columns:5.25rem 1fr;gap:.75rem;align-items:baseline;padding:.4375rem 0;border-top:1px solid var(--hairline)}
+  .cal-row:first-child{border-top:0;padding-top:0}
+  .cal-t{font-size:1.0625rem;color:var(--text-2);font-variant-numeric:tabular-nums;white-space:nowrap}
+  .cal-t.now{color:var(--ok);font-weight:600;display:flex;align-items:center;gap:.375rem}
+  .cal-t.now .dot{width:.5rem;height:.5rem}
+  .cal-s{font-size:1.1875rem;font-weight:500;line-height:1.3;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .cal-row.next .cal-s{font-weight:600}
+  .cal-more{font-size:1rem;color:var(--text-3);margin-top:.375rem}
+  .cal-empty{font-size:1.125rem;color:var(--text-2);line-height:1.4}
+
+  /* Οθόνη 2 (σύρσιμο αριστερά): φαρμακεία και αέρας */
+  #screen2{display:none;flex:1;min-height:0;gap:.875rem;grid-template-columns:1.55fr 1fr}
+  html.s2 main, html.s3 main{display:none}
+  html.s2 #screen2{display:grid}
+  /* Οθόνη 3: ημερολόγιο μήνα + επόμενα */
+  #screen3{display:none;flex:1;min-height:0}
+  html.s3 #screen3{display:flex}
+  #c-month{flex:1}
+  #c-month .body{display:flex;flex-direction:column;min-height:0}
+  .m-head{display:flex;align-items:center;gap:.5rem;margin:-.375rem 0 .375rem}
+  .m-title{font-size:1.5rem;font-weight:700;letter-spacing:-.01em;flex:1}
+  .m-title span{color:var(--text-2);font-weight:500}
+  .m-btn{min-width:2.75rem;min-height:2.75rem;display:inline-flex;align-items:center;justify-content:center;border-radius:var(--r-sm);
+    background:transparent;border:0;color:var(--accent);font:inherit;font-size:1.5rem;cursor:pointer;padding:0 .5rem}
+  .m-btn.txt{font-size:1.0625rem;font-weight:600}
+  .m-btn:active{background:var(--surface-press)}
+  .m-btn[hidden]{display:none}
+  .m-legend{display:flex;gap:1rem;font-size:.9375rem;color:var(--text-2);margin-right:.5rem}
+  .m-legend i{display:inline-block;width:.625rem;height:.625rem;border-radius:3px;margin-right:.375rem;vertical-align:.0625rem}
+  .m-wd{display:grid;grid-template-columns:repeat(7,1fr);font-size:.875rem;font-weight:600;color:var(--text-3);padding:0 .3125rem .25rem}
+  .m-grid{flex:1;min-height:0;display:grid;grid-template-columns:repeat(7,1fr);grid-auto-rows:1fr;border-top:1px solid var(--hairline)}
+  .m-cell{border-bottom:1px solid var(--hairline);padding:.25rem .375rem .125rem;min-width:0;min-height:0;overflow:hidden;cursor:pointer;display:flex;flex-direction:column;gap:.125rem}
+  .m-cell:active{background:rgba(255,255,255,.04)}
+  .m-n{display:inline-flex;align-items:center;justify-content:center;min-width:1.75rem;height:1.75rem;border-radius:999px;align-self:flex-start;margin-left:-.25rem;
+    font-size:1rem;font-weight:600;font-variant-numeric:tabular-nums;flex:0 0 auto}
+  .m-cell.out .m-n{color:var(--text-3);font-weight:400}
+  .m-cell.we .m-n{color:var(--text-2)}
+  .m-cell.today .m-n{background:var(--accent);color:#06121f}
+  .m-cell.sel .m-n{box-shadow:0 0 0 2px var(--text)}
+  .m-ev{width:100%;min-width:0;display:flex;align-items:center;gap:.3125rem;font-size:.8125rem;line-height:1.35;white-space:nowrap;overflow:hidden;color:var(--text-2)}
+  .m-ev i{flex:0 0 3px;align-self:stretch;border-radius:2px}
+  .m-ev span{overflow:hidden;text-overflow:ellipsis}
+  .m-more{flex:0 0 auto;font-size:.75rem;font-weight:600;color:var(--text-3);line-height:1.2;margin-left:auto;padding-left:.25rem}
+  .m-up{flex:0 0 auto;border-top:1px solid var(--hairline);padding-top:.5rem;margin-top:.25rem}
+  .m-up h3{font-size:.9375rem;font-weight:700;color:var(--text-2);margin-bottom:.25rem}
+  .m-up-list{display:grid;grid-template-columns:1fr 1fr;column-gap:1.5rem}
+  .m-row{display:grid;grid-template-columns:3.25rem 4.75rem 1fr;align-items:center;gap:.5rem;padding:.3125rem 0;min-width:0}
+  .m-row.day{grid-template-columns:4.75rem 1fr}
+  .m-date{font-size:.8125rem;font-weight:700;color:var(--text-2);line-height:1.1;text-align:center}
+  .m-date b{display:block;font-size:1.25rem;color:var(--text)}
+  .m-time{font-size:.9375rem;color:var(--text-2);font-variant-numeric:tabular-nums;white-space:nowrap}
+  .m-what{min-width:0;font-size:1.0625rem;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .m-what small{display:block;font-size:.8125rem;font-weight:400;color:var(--text-3)}
+  .m-what small i{display:inline-block;width:.5rem;height:.5rem;border-radius:2px;margin-right:.3125rem}
+  .m-none{font-size:1.0625rem;color:var(--text-2);padding:.375rem 0}
+  #pager{position:fixed;left:50%;bottom:.3125rem;transform:translateX(-50%);display:flex;gap:.5rem;z-index:4}
+  #pager i{display:block;width:.5rem;height:.5rem;border-radius:50%;background:rgba(255,255,255,.28)}
+  #pager i.on{background:rgba(255,255,255,.85)}
+  .ph-item{display:grid;grid-template-columns:1fr auto;gap:.125rem 1rem;padding:.625rem 0;border-top:1px solid var(--hairline);align-items:baseline}
+  .ph-item:first-child{border-top:0;padding-top:0}
+  .ph-name{font-size:1.1875rem;font-weight:600;line-height:1.25;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .ph-tel{font-size:1.25rem;font-weight:600;text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+  .ph-addr{font-size:1rem;color:var(--text-2);line-height:1.3;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .ph-dist{font-size:1rem;color:var(--text-3);text-align:right;white-space:nowrap}
+  .ph-hours{grid-column:1 / -1;font-size:1rem;color:var(--text-2)}
+  .ph-hours b{color:var(--ok);font-weight:600}
+  .aq-big{display:flex;align-items:baseline;gap:.75rem;margin-bottom:.25rem}
+  .aq-big b{font-size:3.5rem;font-weight:500;line-height:1;letter-spacing:-.03em;font-variant-numeric:tabular-nums}
+  .aq-big span{font-size:1.375rem;font-weight:600}
+  .aq-note{font-size:1rem;color:var(--text-2);line-height:1.35;margin-bottom:.875rem}
+  .aq-rows{font-size:1.0625rem;line-height:1.3}
+  .aq-rows .row{display:flex;align-items:center;gap:.625rem;padding:.4375rem 0;border-top:1px solid var(--hairline)}
+  .aq-rows .row span:last-child{margin-left:auto;font-weight:600;font-variant-numeric:tabular-nums}
+
+  /* Νυχτερινή οθόνη: μαύρο φόντο, μόνο ρολόι και τα απαραίτητα, χαμηλή φωτεινότητα κειμένου.
+     Ένα άγγιγμα δείχνει το κανονικό dashboard για 2 λεπτά. */
+  #nightv{position:fixed;top:0;right:0;bottom:0;left:0;z-index:7;background:#000;display:none;
+          flex-direction:column;align-items:center;justify-content:center;color:#7d8794;text-align:center}
+  body.night #nightv{display:flex}
+  html.awake #nightv{display:none}
+  #nv-inner{transition:transform 2s}
+  #nv-clock{font-size:11rem;font-weight:400;letter-spacing:-.04em;line-height:1;font-variant-numeric:tabular-nums}
+  #nv-date{font-size:1.5rem;margin-top:.5rem}
+  #nv-wx{font-size:1.375rem;margin-top:1.5rem;color:#6a737f}
+  #nv-ph{font-size:1.125rem;margin-top:.75rem;color:#5c646f;max-width:46rem}
+
+  @media (prefers-reduced-motion:reduce){ .n-fade{animation:none} #dim,#toast{transition:none} }
+
+  /* Φωτογραφίες φόντου (προαιρετικές). Η κλάση "photos" μπαίνει στο <html>, όχι στο <body>,
+     γιατί το JS των λειτουργιών ξαναγράφει όλο το body.className.
+     Δύο στρώσεις για crossfade μία φορά κάθε λίγα λεπτά, χωρίς blur. Από πάνω σκούρο φίλτρο
+     και πιο σκούρα κάρτες, ώστε το κείμενο να μένει ευανάγνωστο σε οποιαδήποτε φωτογραφία. */
+  #bg{position:fixed;top:0;right:0;bottom:0;left:0;z-index:0;display:none;background:var(--bg)}
+  html.photos #bg{display:block}
+  .bg-img{position:absolute;top:0;right:0;bottom:0;left:0;background-size:cover;background-position:center;
+          opacity:0;transition:opacity 1.5s ease}
+  .bg-img.on{opacity:1}
+  #bg-shade{position:absolute;top:0;right:0;bottom:0;left:0;
+    background:linear-gradient(to bottom, rgba(0,0,0,.42) 0, rgba(0,0,0,0) 9rem), rgba(4,6,10,.50)}
+  #app{position:relative;z-index:1}
+  #dim{z-index:5} #toast{z-index:6}
+  html.photos .card{background:rgba(12,16,22,.74);border-color:rgba(255,255,255,.12)}
+  html.photos .pill{background:rgba(12,16,22,.66)}
+  @media (prefers-reduced-motion:reduce){ .bg-img{transition:none} }
+
+</style>
+</head>
+<body class="daily">
+<div id="bg"><div class="bg-img" id="bg-a"></div><div class="bg-img" id="bg-b"></div><div id="bg-shade"></div></div>
+<div id="app">
+  <header>
+    <div id="clock">--:--</div>
+    <div class="hd-mid">
+      <div id="greet">&nbsp;</div>
+      <div id="date">&nbsp;</div>
+    </div>
+    <div class="hd-right">
+      <span class="pill" id="net-pill"><span class="dot" id="net-dot"></span><span id="net-txt">Wi-Fi</span></span>
+      <button class="pill" id="mode-btn" type="button"><span id="mode-ico">☀️</span><span id="mode-txt">Ημερήσια</span></button>
+    </div>
+  </header>
+
+  <main>
+    <section class="card" id="c-weather">
+      <h2>Καιρός <span class="sp"></span><small id="w-loc"></small></h2>
+      <div class="body" id="w-body"><div class="muted">Φόρτωση...</div></div>
+    </section>
+
+    <section class="card" id="c-cal">
+      <h2>Ημερολόγιο <span class="sp"></span><small id="cal-day"></small></h2>
+      <div id="cal-mini" role="button" aria-label="Άνοιγμα ημερολογίου μήνα"></div>
+      <div class="body" id="cal-body"><div class="muted">Φόρτωση...</div></div>
+    </section>
+
+    <section class="card" id="c-news">
+      <h2>Ειδήσεις <span class="sp"></span><small id="n-upd"></small></h2>
+      <div class="body" id="n-body"><div class="muted">Φόρτωση...</div></div>
+    </section>
+
+    <section class="card" id="c-vpn">
+      <h2>VPN <span class="sp"></span><small id="v-upd"></small></h2>
+      <div class="body" id="v-body"><div class="muted">Έλεγχος...</div></div>
+    </section>
+
+    <section class="card" id="c-pihole">
+      <h2>Ad blocker <span class="sp"></span><small id="p-upd"></small></h2>
+      <div class="body" id="p-body"><div class="muted">Έλεγχος...</div></div>
+    </section>
+
+    <section class="card" id="c-system">
+      <h2>Σύστημα</h2>
+      <div class="body" id="s-body"></div>
+    </section>
+
+    <section class="card" id="c-home">
+      <h2>Σπίτι</h2>
+      <div class="body home-grid" id="h-body"></div>
+    </section>
+
+    <section class="card" id="c-coffee">
+      <h2>Coffee corner</h2>
+      <div class="body cf">
+        <div><div class="cf-msg" id="cf-msg">&nbsp;</div><div class="cf-sub" id="cf-sub"></div></div>
+        <div class="cf-sep"></div>
+        <div><div class="cf-lbl">Λέξη της ημέρας</div><div class="cf-word" id="cf-word"></div><div class="cf-mean" id="cf-mean"></div></div>
+      </div>
+    </section>
+
+    <!-- Spotify: παίρνει τη θέση του Coffee corner όσο παίζει μουσική (dashboard-spotify.js) -->
+    <section class="card" id="c-spot" aria-label="Spotify, παίζει τώρα">
+      <div class="sp-wrap">
+        <div class="sp-art" id="sp-art"></div>
+        <div class="sp-main">
+          <div class="sp-eye"><span id="sp-eye-s">Παίζει τώρα</span><span class="sp-dev" id="sp-dev"></span></div>
+          <div class="sp-title" id="sp-title"></div>
+          <div class="sp-artist" id="sp-artist"></div>
+          <div class="sp-prog"><span id="sp-cur">0:00</span><div class="sp-bar"><i id="sp-fill"></i></div><span id="sp-dur"></span></div>
+          <div class="sp-ctl">
+            <button type="button" class="sp-b" id="sp-prev" aria-label="Προηγούμενο"></button>
+            <button type="button" class="sp-b sp-pp" id="sp-play" aria-label="Αναπαραγωγή"></button>
+            <button type="button" class="sp-b" id="sp-next" aria-label="Επόμενο"></button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="card" id="c-bus">
+      <h2>Λεωφορεία ΟΑΣΑ <span class="sp"></span><small id="b-upd"></small></h2>
+      <div class="body" id="b-body"><div class="muted">Φόρτωση...</div></div>
+    </section>
+
+    <section class="card" id="c-route">
+      <h2>Διαδρομή προς δουλειά</h2>
+      <div class="body" id="r-body"></div>
+    </section>
+  </main>
+
+  <!-- Οθόνη 2: σύρε αριστερά για να φανεί, δεξιά για να γυρίσεις -->
+  <div id="screen2">
+    <section class="card" id="c-pharm">
+      <h2>Εφημερεύοντα φαρμακεία <span class="sp"></span><small id="ph-upd"></small></h2>
+      <div class="body" id="ph-body"><div class="muted">Φόρτωση...</div></div>
+    </section>
+    <section class="card" id="c-air">
+      <h2>Ποιότητα αέρα <span class="sp"></span><small id="aq-upd"></small></h2>
+      <div class="body" id="aq-body"><div class="muted">Φόρτωση...</div></div>
+    </section>
+  </div>
+
+  <!-- Οθόνη 3: ημερολόγιο μήνα, από κάτω τα επόμενα (ή της μέρας που πατήθηκε) -->
+  <div id="screen3">
+    <section class="card" id="c-month">
+      <div class="body">
+        <div class="m-head">
+          <div class="m-title" id="m-title"></div>
+          <div class="m-legend" id="m-legend"></div>
+          <button class="m-btn txt" id="m-today" type="button" hidden>Σήμερα</button>
+          <button class="m-btn" id="m-prev" type="button" aria-label="Προηγούμενος μήνας">‹</button>
+          <button class="m-btn" id="m-next" type="button" aria-label="Επόμενος μήνας">›</button>
+        </div>
+        <div class="m-wd"><span>Δευ</span><span>Τρί</span><span>Τετ</span><span>Πέμ</span><span>Παρ</span><span>Σάβ</span><span>Κυρ</span></div>
+        <div class="m-grid" id="m-grid"></div>
+        <div class="m-up"><h3 id="m-up-title">Επόμενα</h3><div class="m-up-list" id="m-up-list"></div></div>
+      </div>
+    </section>
+  </div>
+</div>
+<div id="dim"></div>
+<div id="toast"></div>
+
+<!-- Προσωπικές ρυθμίσεις και κλειδιά (δεν ανεβαίνουν στο GitHub). Αν λείπει, η σελίδα δουλεύει με τις προεπιλογές. -->
+<script src="dashboard-config.js"></script>
+<script>
+/* =====================================================================
+   CONFIG: όλες οι ρυθμίσεις είναι εδώ
+   ===================================================================== */
+var CONFIG = {
+  NAME: "",                       // για το "Καλημέρα, ..."
+
+  LOCATION: { name: "Αθήνα", lat: 37.9755, lon: 23.7348 },
+
+  // Πρωινή λειτουργία: ημέρες (1=Δευτέρα ... 5=Παρασκευή, 6=Σάββατο, 0=Κυριακή) και ώρες
+  MORNING: { days: [1,2,3,4,5], from: "06:30", to: "09:30" },
+
+  // Νυχτερινό χαμήλωμα οθόνης (βάλε enabled:false για να μην χαμηλώνει)
+  NIGHT: { enabled: true, from: "23:30", to: "06:15" },
+
+  // Στάσεις ΟΑΣΑ: ο κωδικός στάσης (StopCode) φαίνεται στην εφαρμογή OASA Telematics
+  // ή στο telematics.oasa.gr. Μπορείς να βάλεις πάνω από μία.
+  // lines: προαιρετικό φίλτρο γραμμών, π.χ. ["304","305"]. Κενό = όλες.
+  OASA_STOPS: [
+    { code: "790038", label: "Προς Αθήνα", lines: [], daily: 2 },   // daily: έως πόσες αφίξεις στην απλή λειτουργία
+    { code: "790026", label: "Προς Αρτέμιδα", lines: [], daily: 2 }
+  ],
+  OASA_API: "https://telematics.oasa.gr/api/",
+
+  // Διαδρομή: διεύθυνση ή συντεταγμένες γραφείου
+  WORK: { label: "Γραφείο", address: "", lat: null, lon: null },
+
+  // Ειδήσεις (RSS)
+  NEWS: {
+    greek: [
+      { name: "ΕΡΤnews", url: "https://www.ertnews.gr/feed/" },
+      { name: "in.gr",   url: "https://www.in.gr/feed/" }
+    ],
+    world: [
+      { name: "BBC",      url: "https://feeds.bbci.co.uk/news/world/rss.xml" },
+      { name: "Guardian", url: "https://www.theguardian.com/world/rss" }
+    ],
+    perSection: 12   // με scroll φαίνονται όλοι
+  },
+
+  // VPN: η σελίδα βλέπει τη δημόσια IP σου. Αν ο πάροχος (ISP) ΔΕΝ ταιριάζει με τον
+  // οικιακό σου, θεωρεί ότι το VPN είναι ενεργό. Γράψε λέξεις που υπάρχουν στο όνομα του ISP σου.
+  VPN: {
+    homeIspKeywords: [],   // λέξεις από το όνομα του οικιακού σου παρόχου, π.χ. ["Cosmote"]
+    appPackage: "com.nordvpn.android"          // NordVPN
+  },
+
+  // Pi-hole v6: άφησε url κενό μέχρι να στηθεί ο server.
+  // Παράδειγμα: url: "http://192.168.1.50", password: "app password από τις ρυθμίσεις Pi-hole"
+  PIHOLE: { url: "", password: "" },
+
+  // Δημόσιοι CORS proxies για πηγές που δεν επιτρέπουν απευθείας πρόσβαση (ΟΑΣΑ, RSS).
+  // Όταν μπει το Raspberry Pi, εδώ θα μπει ο δικός σου proxy.
+  PROXIES: [
+    "https://api.allorigins.win/raw?url=",
+    "https://api.codetabs.com/v1/proxy?quest="
+  ],
+
+  // Συχνότητα ανανέωσης (δευτερόλεπτα)
+  REFRESH: { weather: 900, news: 900, vpn: 300, pihole: 60, bus: 30, reloadPageHours: 6 }
+};
+// Οι προσωπικές τιμές από το dashboard-config.js (αν υπάρχει) αντικαθιστούν τις παραπάνω
+if(window.LOCAL && LOCAL.CONFIG){ for(var _k in LOCAL.CONFIG) CONFIG[_k] = LOCAL.CONFIG[_k]; }
+
+/* =====================================================================
+   Βοηθητικά
+   ===================================================================== */
+var DEMO = /[?&]demo=1/.test(location.search);
+var $ = function(id){ return document.getElementById(id); };
+var STATUS = {};   // κατάσταση πηγών για την κάρτα Σύστημα
+var BOOT = Date.now();
+var DAYS = ["Κυριακή","Δευτέρα","Τρίτη","Τετάρτη","Πέμπτη","Παρασκευή","Σάββατο"];
+var DAYS_S = ["Κυρ","Δευ","Τρί","Τετ","Πέμ","Παρ","Σάβ"];
+var MONTHS_G = ["Ιανουαρίου","Φεβρουαρίου","Μαρτίου","Απριλίου","Μαΐου","Ιουνίου","Ιουλίου","Αυγούστου","Σεπτεμβρίου","Οκτωβρίου","Νοεμβρίου","Δεκεμβρίου"];
+
+function esc(s){ return String(s == null ? "" : s).replace(/[&<>"']/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c];}); }
+function pad(n){ return (n<10?"0":"")+n; }
+function hm(d){ return pad(d.getHours())+":"+pad(d.getMinutes()); }
+function toMin(s){ var p=s.split(":"); return (+p[0])*60+(+p[1]); }
+function inWindow(from,to,d){
+  var m=d.getHours()*60+d.getMinutes(), a=toMin(from), b=toMin(to);
+  return a<=b ? (m>=a && m<b) : (m>=a || m<b);
+}
+function ago(ts){
+  if(!ts) return "";
+  var s=Math.round((Date.now()-ts)/1000);
+  if(s<60) return "τώρα";
+  if(s<3600) return Math.round(s/60)+"′";
+  if(s<86400) return Math.round(s/3600)+" ώρ.";
+  return Math.round(s/86400)+" ημ.";
+}
+function store(k,v){ try{ localStorage.setItem("hcc_"+k, JSON.stringify({t:Date.now(),v:v})); }catch(e){} }
+function load(k){ try{ var o=JSON.parse(localStorage.getItem("hcc_"+k)); return o||null; }catch(e){ return null; } }
+function mark(key, ok, note){ STATUS[key]={ok:ok,t:Date.now(),note:note||""}; renderSystem(); }
+function toast(msg){ var t=$("toast"); t.textContent=msg; t.className="show"; setTimeout(function(){t.className="";},2500); }
+
+function fetchT(url, opts, ms){
+  opts = opts || {};
+  var ctrl = (typeof AbortController!=="undefined") ? new AbortController() : null;
+  if(ctrl) opts.signal = ctrl.signal;
+  var timer = setTimeout(function(){ if(ctrl) ctrl.abort(); }, ms || 12000);
+  return fetch(url, opts).then(function(r){ clearTimeout(timer); if(!r.ok) throw new Error("HTTP "+r.status); return r; },
+                               function(e){ clearTimeout(timer); throw e; });
+}
+// Δοκιμάζει απευθείας και μετά μέσω των proxies. Θυμάται αν ένας host θέλει proxy.
+var NEEDS_PROXY = {};
+function fetchText(url){
+  var host = url.split("/")[2];
+  var tries = [];
+  if(!NEEDS_PROXY[host]) tries.push(url);
+  CONFIG.PROXIES.forEach(function(p){ tries.push(p+encodeURIComponent(url)); });
+  var i=0;
+  function next(){
+    if(i>=tries.length) return Promise.reject(new Error("όλες οι διαδρομές απέτυχαν"));
+    var u=tries[i++];
+    return fetchT(u).then(function(r){ return r.text(); }).catch(function(e){
+      if(u===url) NEEDS_PROXY[host]=true;
+      return next();
+    });
+  }
+  return next();
+}
+function fetchJSON(url){ return fetchText(url).then(function(t){ return JSON.parse(t); }); }
+
+/* =====================================================================
+   Ρολόι, χαιρετισμός, λειτουργίες
+   ===================================================================== */
+var manualMode = null, manualUntil = 0;
+function autoMode(d){
+  return (CONFIG.MORNING.days.indexOf(d.getDay())>=0 && inWindow(CONFIG.MORNING.from, CONFIG.MORNING.to, d)) ? "morning" : "daily";
+}
+function currentMode(){
+  if(manualMode && Date.now()<manualUntil) return manualMode;
+  manualMode=null; return autoMode(new Date());
+}
+function applyMode(){
+  var m=currentMode();
+  var want = m==="morning" ? "morning" : "daily";
+  var night = CONFIG.NIGHT.enabled && inWindow(CONFIG.NIGHT.from, CONFIG.NIGHT.to, new Date());
+  var cls = want + (night?" night":"");
+  if(document.body.className!==cls){
+    var wasMorning = /morning/.test(document.body.className);
+    document.body.className=cls;
+    if(want==="morning" && !wasMorning){ loadBus(); }
+  }
+  $("mode-ico").textContent = want==="morning" ? "🌅" : "☀️";
+  $("mode-txt").textContent = (want==="morning" ? "Πρωινή" : "Ημερήσια") + (manualMode ? " · χειροκίνητα" : "");
+}
+$("mode-btn").addEventListener("click", function(){
+  var m=currentMode();
+  manualMode = m==="morning" ? "daily" : "morning";
+  manualUntil = Date.now()+60*60*1000;
+  applyMode();
+  toast("Λειτουργία για 1 ώρα, μετά επιστρέφει αυτόματα");
+});
+
+function tick(){
+  var d=new Date(), h=d.getHours();
+  $("clock").textContent=hm(d);
+  var g = h<5 ? "Καληνύχτα" : h<13 ? "Καλημέρα" : h<20 ? "Καλησπέρα" : "Καληνύχτα";
+  $("greet").textContent = g + (CONFIG.NAME ? ", "+CONFIG.NAME : "");
+  $("date").textContent = DAYS[d.getDay()]+" "+d.getDate()+" "+MONTHS_G[d.getMonth()]+" "+d.getFullYear();
+  applyMode();
+  var on = navigator.onLine !== false;
+  $("net-dot").className = "dot "+(on?"ok":"bad");
+  $("net-txt").textContent = on ? "Online" : "Χωρίς σύνδεση";
+}
+
+/* =====================================================================
+   Καιρός (Open-Meteo, δωρεάν, χωρίς κλειδί)
+   ===================================================================== */
+var WMO = {
+  0:["Αίθριος","☀️","🌙"],1:["Κυρίως αίθριος","🌤️","🌙"],2:["Λίγα σύννεφα","⛅","☁️"],3:["Συννεφιά","☁️","☁️"],
+  45:["Ομίχλη","🌫️"],48:["Παγωμένη ομίχλη","🌫️"],
+  51:["Ψιχάλα","🌦️"],53:["Ψιχάλα","🌦️"],55:["Πυκνή ψιχάλα","🌧️"],56:["Παγωμένη ψιχάλα","🌧️"],57:["Παγωμένη ψιχάλα","🌧️"],
+  61:["Ασθενής βροχή","🌦️"],63:["Βροχή","🌧️"],65:["Δυνατή βροχή","🌧️"],66:["Παγωμένη βροχή","🌧️"],67:["Παγωμένη βροχή","🌧️"],
+  71:["Ασθενές χιόνι","🌨️"],73:["Χιόνι","🌨️"],75:["Πυκνό χιόνι","❄️"],77:["Χιονόνερο","🌨️"],
+  80:["Μπόρες","🌦️"],81:["Μπόρες","🌧️"],82:["Ισχυρές μπόρες","⛈️"],85:["Χιονόπτωση","🌨️"],86:["Χιονόπτωση","❄️"],
+  95:["Καταιγίδα","⛈️"],96:["Καταιγίδα με χαλάζι","⛈️"],99:["Καταιγίδα με χαλάζι","⛈️"]
+};
+function wInfo(code, isDay){
+  var w = WMO[code] || ["","🌡️"];
+  return { text:w[0], icon: (isDay===0 && w[2]) ? w[2] : w[1] };
+}
+function windDir(deg){ var d=["Β","ΒΑ","Α","ΝΑ","Ν","ΝΔ","Δ","ΒΔ"]; return d[Math.round(deg/45)%8]; }
+function bft(kmh){ var t=[1,6,12,20,29,39,50,62,75,89,103,118]; for(var i=0;i<t.length;i++) if(kmh<t[i]) return i; return 12; }
+
+function loadWeather(){
+  if(DEMO) return renderWeather(demoWeather());
+  var L=CONFIG.LOCATION;
+  var url="https://api.open-meteo.com/v1/forecast?latitude="+L.lat+"&longitude="+L.lon+
+    "&current=temperature_2m,apparent_temperature,relative_humidity_2m,precipitation,weather_code,wind_speed_10m,wind_direction_10m,is_day"+
+    "&hourly=temperature_2m,precipitation_probability,weather_code,is_day"+
+    "&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max,sunrise,sunset"+
+    "&timezone=Europe%2FAthens&forecast_days=5";
+  fetchT(url).then(function(r){return r.json();}).then(function(j){
+    store("weather", j); renderWeather(j); mark("Καιρός", true);
+  }).catch(function(e){
+    var c=load("weather"); if(c) renderWeather(c.v, true);
+    else $("w-body").innerHTML='<div class="err">Δεν φορτώθηκε ο καιρός. Νέα προσπάθεια σε λίγο.</div>';
+    mark("Καιρός", false, e.message); setTimeout(loadWeather, 60000);
+  });
+}
+function renderWeather(j, stale){
+  $("w-loc").textContent = CONFIG.LOCATION.name + (stale?" · παλιά δεδομένα":"");
+  var c=j.current, wi=wInfo(c.weather_code, c.is_day);
+  var now=new Date();
+  // επόμενες 8 ώρες
+  var H=j.hourly, start=0;
+  for(var i=0;i<H.time.length;i++){ if(new Date(H.time[i])>now - 3600000){ start=i; break; } }
+  var hours="", maxRain=0, maxRainAt="";
+  for(var k=start;k<Math.min(start+8,H.time.length);k++){
+    var t=new Date(H.time[k]), p=H.precipitation_probability[k]||0, hw=wInfo(H.weather_code[k], H.is_day[k]);
+    if(p>maxRain){ maxRain=p; maxRainAt=pad(t.getHours())+":00"; }
+    hours+='<div class="w-h"><div class="t">'+pad(t.getHours())+'</div><div class="i">'+hw.icon+'</div><div class="v">'+
+      Math.round(H.temperature_2m[k])+'°</div><div class="bar"><i style="height:'+Math.max(2,p*.5)+'px"></i></div><div class="p">'+p+'%</div></div>';
+  }
+  var D=j.daily, days="";
+  for(var d=0; d<D.time.length && d<5; d++){
+    var dd=new Date(D.time[d]+"T12:00:00"), dwi=wInfo(D.weather_code[d],1);
+    days+='<div class="w-d"><span class="n">'+(d===0?"Σήμερα":DAYS_S[dd.getDay()])+'</span><span>'+dwi.icon+'</span>'+
+      '<span class="mm"><b>'+Math.round(D.temperature_2m_max[d])+'°</b> <span class="muted">/ '+Math.round(D.temperature_2m_min[d])+'°</span></span>'+
+      '<span class="r">☔ '+(D.precipitation_probability_max[d]||0)+'%</span></div>';
+  }
+  // έξυπνη συμβουλή
+  var tip="", tipCls="w-tip";
+  if(maxRain>=50) tip="☔ Πιθανότητα βροχής "+maxRain+"% γύρω στις "+maxRainAt+". Πάρε ομπρέλα.";
+  else if(maxRain>=25) tip="🌂 Μικρή πιθανότητα βροχής ("+maxRain+"%) τις επόμενες ώρες.";
+  else if(c.apparent_temperature<=7) { tip="🧥 Κρύο: αίσθηση "+Math.round(c.apparent_temperature)+"°. Ντύσου ζεστά."; }
+  else if(c.apparent_temperature>=33) { tip="🥵 Ζέστη: αίσθηση "+Math.round(c.apparent_temperature)+"°. Νερό μαζί σου."; tipCls+=" warm"; }
+  var sr=new Date(D.sunrise[0]), ss=new Date(D.sunset[0]);
+  $("w-body").innerHTML =
+    '<div class="w-now"><div class="w-ico">'+wi.icon+'</div><div><div class="w-temp">'+Math.round(c.temperature_2m)+'°</div></div>'+
+    '<div style="margin-left:6px"><div class="w-desc">'+esc(wi.text)+'</div><div class="w-feels">Αίσθηση '+Math.round(c.apparent_temperature)+'°</div></div></div>'+
+    '<div class="w-stats">'+
+      '<div class="w-stat"><b>'+Math.round(c.relative_humidity_2m)+'%</b><span>Υγρασία</span></div>'+
+      '<div class="w-stat"><b>'+bft(c.wind_speed_10m)+' Bf '+windDir(c.wind_direction_10m)+'</b><span>Άνεμος</span></div>'+
+      '<div class="w-stat"><b>'+(c.precipitation||0).toFixed(1)+' mm</b><span>Βροχή τώρα</span></div>'+
+    '</div>'+
+    (tip?'<div class="'+tipCls+'">'+tip+'</div>':'')+
+    '<div class="w-hours">'+hours+'</div>'+
+    '<div class="w-days">'+days+'</div>'+
+    '<div class="w-sun">🌅 '+hm(sr)+' · 🌇 '+hm(ss)+'</div>';
+}
+
+/* =====================================================================
+   Ειδήσεις (RSS μέσω rss2json, με εφεδρεία τους proxies)
+   ===================================================================== */
+function parseRSS(xml, src){
+  var doc=new DOMParser().parseFromString(xml,"text/xml"), out=[];
+  var items=doc.querySelectorAll("item, entry");
+  for(var i=0;i<items.length && i<15;i++){
+    var it=items[i], q=function(s){ var n=it.querySelector(s); return n? n.textContent.trim() : ""; };
+    var ln = it.querySelector("link"), link = ln ? (ln.getAttribute("href") || ln.textContent.trim()) : "";
+    out.push({ title:q("title"), date: Date.parse(q("pubDate")||q("updated")||q("published"))||0, src:src, link:link });
+  }
+  return out;
+}
+function loadFeed(f){
+  var r2j="https://api.rss2json.com/v1/api.json?rss_url="+encodeURIComponent(f.url);
+  return fetchT(r2j).then(function(r){return r.json();}).then(function(j){
+    if(j.status!=="ok") throw new Error("rss2json");
+    return j.items.map(function(x){ return { title:x.title, date:Date.parse((x.pubDate||"").replace(" ","T"))||0, src:f.name, link:x.link||"" }; });
+  }).catch(function(){
+    return fetchText(f.url).then(function(x){ return parseRSS(x, f.name); });
+  }).catch(function(){ return []; });
+}
+function mergeFeeds(list){
+  return Promise.all(list.map(loadFeed)).then(function(arrs){
+    var all=[].concat.apply([],arrs), seen={}, out=[];
+    all.sort(function(a,b){return b.date-a.date;});
+    all.forEach(function(x){ var k=x.title.toLowerCase().slice(0,60); if(x.title && !seen[k]){ seen[k]=1; out.push(x);} });
+    return out;
+  });
+}
+function loadNews(){
+  if(DEMO){ renderNews(demoNews()); return; }
+  Promise.all([mergeFeeds(CONFIG.NEWS.greek), mergeFeeds(CONFIG.NEWS.world)]).then(function(r){
+    if(!r[0].length && !r[1].length) throw new Error("καμία πηγή");
+    var data={gr:r[0], world:r[1]}; store("news",data); renderNews(data); mark("Ειδήσεις", true);
+  }).catch(function(e){
+    var c=load("news"); if(c) renderNews(c.v, true);
+    else $("n-body").innerHTML='<div class="err">Δεν φορτώθηκαν ειδήσεις. Νέα προσπάθεια σε λίγο.</div>';
+    mark("Ειδήσεις", false, e.message); setTimeout(loadNews, 90000);
+  });
+}
+var newsData=null;
+function renderNews(d, stale){
+  newsData=d;
+  $("n-upd").textContent = stale ? "παλιά δεδομένα" : "ενημ. "+hm(new Date());
+  drawNews();
+}
+function drawNews(){
+  if(!newsData) return;
+  var morning = /morning/.test(document.body.className);
+  var n = CONFIG.NEWS.perSection;   // η στήλη κυλάει, οπότε ίδιο πλήθος σε όλες τις λειτουργίες
+  function sec(title, arr, cnt){
+    if(!arr || !arr.length) return "";
+    return '<div class="n-sec"><h3>'+title+'</h3>'+arr.slice(0,cnt).map(function(x){
+      return '<div class="n-item" data-title="'+esc(x.title)+'" data-link="'+esc(x.link||"")+'" data-src="'+esc(x.src)+'"><span class="n-t">'+esc(x.title)+'</span><div class="meta">'+esc(x.src)+(x.date?' · '+ago(x.date):'')+'</div></div>';
+    }).join("")+'</div>';
+  }
+  $("n-body").innerHTML = '<div class="n-fade">'+sec("🇬🇷 ΕΛΛΑΔΑ", newsData.gr, n)+sec("🌍 ΚΟΣΜΟΣ", newsData.world, n)+'</div>';
+}
+
+/* =====================================================================
+   VPN (σύγκριση ISP της δημόσιας IP)
+   ===================================================================== */
+function loadVPN(){
+  if(DEMO) return renderVPN({ip:"185.213.154.**", isp:"M247 Europe", country:"Netherlands", city:"Amsterdam"});
+  fetchT("https://ipwho.is/").then(function(r){return r.json();}).then(function(j){
+    if(j.success===false) throw new Error(j.message||"ipwho");
+    var c=j.connection||{};
+    renderVPN({ip:j.ip, isp:c.isp||c.org||"", country:j.country, city:j.city});
+    mark("VPN έλεγχος", true);
+  }).catch(function(){
+    return fetchT("https://ipapi.co/json/").then(function(r){return r.json();}).then(function(j){
+      renderVPN({ip:j.ip, isp:j.org||"", country:j.country_name, city:j.city}); mark("VPN έλεγχος", true);
+    });
+  }).catch(function(e){
+    $("v-body").innerHTML='<div class="err">Δεν έγινε έλεγχος IP.</div>'+vpnButton();
+    mark("VPN έλεγχος", false, e.message); setTimeout(loadVPN, 60000);
+  });
+}
+function vpnButton(){ return '<div style="margin-top:8px"><button class="btn" id="vpn-open" type="button">⚙️ Ρυθμίσεις VPN</button></div>'; }
+function renderVPN(v){
+  var isp=(v.isp||"").toLowerCase();
+  var home = CONFIG.VPN.homeIspKeywords.some(function(k){ return isp.indexOf(k.toLowerCase())>=0; });
+  var on = !home && !!v.isp;
+  $("v-upd").textContent = "ενημ. "+hm(new Date());
+  $("v-body").innerHTML =
+    '<div class="st-big"><span class="dot '+(on?"ok":"warn")+'"></span>'+(on?"Ενεργό":"Ανενεργό")+'</div>'+
+    '<div class="kv">IP <b>'+esc(v.ip)+'</b><br>'+esc(v.isp)+' · '+esc(v.city?v.city+", ":"")+esc(v.country)+'</div>'+vpnButton();
+}
+document.addEventListener("click", function(e){
+  var t=e.target.closest ? e.target.closest("#vpn-open") : null;
+  if(!t) return;
+  var pkg=CONFIG.VPN.appPackage;
+  if(window.fully){
+    try{ if(pkg) fully.startApplication(pkg); else fully.startIntent("intent:#Intent;action=android.settings.VPN_SETTINGS;end"); return; }catch(err){}
+  }
+  location.href = pkg ? "intent://#Intent;package="+pkg+";end" : "intent:#Intent;action=android.settings.VPN_SETTINGS;end";
+});
+
+/* =====================================================================
+   Pi-hole v6
+   ===================================================================== */
+var piSid=null;
+function piAuth(){
+  if(!CONFIG.PIHOLE.password) return Promise.resolve(null);
+  return fetchT(CONFIG.PIHOLE.url+"/api/auth",{method:"POST",headers:{"Content-Type":"text/plain"},
+    body:JSON.stringify({password:CONFIG.PIHOLE.password})}).then(function(r){return r.json();}).then(function(j){
+    piSid = j.session && j.session.sid; return piSid;
+  });
+}
+function piGet(path){
+  var u=CONFIG.PIHOLE.url+path+(piSid?(path.indexOf("?")>=0?"&":"?")+"sid="+encodeURIComponent(piSid):"");
+  return fetchT(u).then(function(r){return r.json();});
+}
+function loadPihole(){
+  if(DEMO) return renderPihole({queries:{total:18432,blocked:3127,percent_blocked:16.97},gravity:{domains_being_blocked:142380},clients:{active:9}},{blocking:"enabled"});
+  if(!CONFIG.PIHOLE.url){
+    $("p-upd").textContent="";
+    $("p-body").innerHTML='<div class="st-big"><span class="dot"></span>Δεν έχει στηθεί</div>'+
+      '<div class="kv">Θα ενεργοποιηθεί όταν μπει το Raspberry Pi με Pi-hole. Συμπλήρωσε τότε το PIHOLE στο CONFIG.</div>';
+    return;
+  }
+  var go=function(){ return Promise.all([piGet("/api/stats/summary"), piGet("/api/dns/blocking")]); };
+  (piSid||!CONFIG.PIHOLE.password ? go() : piAuth().then(go)).catch(function(){
+    piSid=null; return piAuth().then(go);
+  }).then(function(r){ renderPihole(r[0], r[1]); mark("Pi-hole", true); })
+  .catch(function(e){
+    $("p-body").innerHTML='<div class="st-big"><span class="dot bad"></span>Χωρίς απόκριση</div><div class="kv">'+esc(CONFIG.PIHOLE.url)+'</div>';
+    mark("Pi-hole", false, e.message);
+  });
+}
+function renderPihole(s, b){
+  var on = b && b.blocking==="enabled";
+  var q=s.queries||{};
+  $("p-upd").textContent="ενημ. "+hm(new Date());
+  $("p-body").innerHTML =
+    '<div class="st-big"><span class="dot '+(on?"ok":"bad")+'"></span>'+(on?"Προστασία ενεργή":"Απενεργοποιημένο")+'</div>'+
+    '<div class="ph-grid">'+
+      '<div><b>'+(q.blocked||0).toLocaleString("el-GR")+'</b>μπλοκαρίστηκαν</div>'+
+      '<div><b>'+(q.percent_blocked||0).toFixed(1)+'%</b>των αιτημάτων</div>'+
+      '<div><b>'+(q.total||0).toLocaleString("el-GR")+'</b>αιτήματα σήμερα</div>'+
+      '<div><b>'+((s.clients&&s.clients.active)||0)+'</b>συσκευές</div>'+
+    '</div>';
+}
+
+/* =====================================================================
+   ΟΑΣΑ Telematics
+   ===================================================================== */
+var routeNames={}, stopNames={};
+function oasa(act,p1){ return fetchJSON(CONFIG.OASA_API+"?act="+act+"&p1="+encodeURIComponent(p1)); }
+function ensureStopInfo(code){
+  if(routeNames[code]) return Promise.resolve();
+  return Promise.all([
+    oasa("webRoutesForStop",code).catch(function(){return [];}),   // το getRoutesForStop καταργήθηκε από τον ΟΑΣΑ (11/2026)
+    oasa("getStopNameAndXY",code).catch(function(){return [];})
+  ]).then(function(r){
+    var m={}; (r[0]||[]).forEach(function(x){ m[x.RouteCode]={line:x.LineID, descr:x.RouteDescr||x.LineDescr||""}; });
+    routeNames[code]=m;
+    if(r[1] && r[1][0]) stopNames[code]=r[1][0].stop_descr;
+  });
+}
+var busTimer=null;
+function loadBus(){
+  if(!$("c-bus").offsetParent) return;   // μόνο όταν φαίνεται η κάρτα (πρωί: μεγάλη, μέρα: κάτω δεξιά)
+  if(DEMO) return renderBus([{label:CONFIG.OASA_STOPS[0].label, name:"", rows:[
+    {line:"304",descr:"ΤΕΡΜΑ - ΝΟΜΙΣΜΑΤΟΚΟΠΕΙΟ",min:4},{line:"305",descr:"ΤΕΡΜΑ - ΠΑΙΑΝΙΑ - Μ. ΠΑΛΛΗΝΗ",min:11},
+    {line:"316",descr:"ΤΕΡΜΑ - ΜΑΡΚΟΠΟΥΛΟ",min:18},{line:"304",descr:"ΤΕΡΜΑ - ΝΟΜΙΣΜΑΤΟΚΟΠΕΙΟ",min:27}]}]);
+  var stops=CONFIG.OASA_STOPS.filter(function(s){return s.code;});
+  if(!stops.length){
+    $("b-body").innerHTML='<div class="b-empty">Δεν έχει οριστεί στάση.<br><span class="dim" style="font-size:14px">Βάλε τον κωδικό στάσης στο CONFIG → OASA_STOPS.</span></div>';
+    return;
+  }
+  Promise.all(stops.map(function(s){
+    return ensureStopInfo(s.code).then(function(){ return oasa("getStopArrivals", s.code); }).then(function(arr){
+      var rows=(arr||[]).map(function(a){
+        var rn=routeNames[s.code][a.route_code]||{line:"?",descr:""};
+        return {line:rn.line, descr:rn.descr, min:+a.btime2};
+      }).filter(function(x){ return !s.lines || !s.lines.length || s.lines.indexOf(String(x.line))>=0; });
+      rows.sort(function(a,b){return a.min-b.min;});
+      return {label:s.label, name:stopNames[s.code]||"", rows:rows};
+    });
+  })).then(function(res){ renderBus(res); mark("ΟΑΣΑ", true); })
+  .catch(function(e){
+    $("b-body").innerHTML='<div class="err">Δεν φορτώθηκαν οι αφίξεις. Νέα προσπάθεια σε '+CONFIG.REFRESH.bus+'″.</div>';
+    mark("ΟΑΣΑ", false, e.message);
+  });
+}
+function renderBus(res){
+  $("b-upd").textContent="ενημ. "+hm(new Date());
+  // Απλή λειτουργία: συνολικά BUS_DAILY_TOTAL θέσεις. Κάθε στάση με τη σειρά παίρνει όσες αφίξεις έχει,
+  // έως το daily της. Π.χ. στάση Α 2 + στάση Β 1, ή αν η Α έχει μόνο 1, τότε 1 + 2.
+  var BUS_DAILY_TOTAL = 3, alloc = [];
+  $("b-body").innerHTML = res.map(function(s, i){
+    var morning = /morning/.test(document.body.className), cfg = CONFIG.OASA_STOPS[i] || {};
+    var used = alloc.slice(0,i).reduce(function(a,b){return a+b;},0), restMin = res.length-1-i;
+    var per = morning ? (res.length>1 ? 4 : 8) : Math.max(1, Math.min(cfg.daily || 2, BUS_DAILY_TOTAL - used - restMin));
+    alloc[i] = Math.min(per, Math.max(1, s.rows.length));
+    var rows = s.rows.length ? s.rows.slice(0, per).map(function(r){
+      return '<div class="b-row"><span class="b-line">'+esc(r.line)+'</span><span class="b-desc">'+esc(r.descr)+'</span>'+
+        '<span class="b-min'+(r.min<=5?" soon":"")+'">'+r.min+'<small> λεπ.</small></span></div>';
+    }).join("") : '<div class="b-empty">Δεν υπάρχουν προγραμματισμένες αφίξεις αυτή τη στιγμή.</div>';
+    return '<div class="b-stop">📍 '+esc(s.label)+(s.name?' · '+esc(s.name):'')+'</div>'+rows;
+  }).join('<div style="height:12px"></div>');
+}
+
+/* =====================================================================
+   Διαδρομή (χωρίς API, απλά ανοίγει την πλοήγηση)
+   ===================================================================== */
+function renderRoute(){
+  var W=CONFIG.WORK, has = W.address || (W.lat && W.lon);
+  if(!has && !DEMO){
+    $("r-body").innerHTML='<div class="r-dest muted">Δεν έχει οριστεί προορισμός.<br><span class="dim" style="font-size:14px">Συμπλήρωσε το CONFIG → WORK.</span></div>';
+    return;
+  }
+  var dest = (W.lat && W.lon) ? (W.lat+","+W.lon) : (W.address || "Σύνταγμα, Αθήνα");
+  var g="https://www.google.com/maps/dir/?api=1&destination="+encodeURIComponent(dest)+"&travelmode=driving";
+  var z = (W.lat && W.lon) ? "https://waze.com/ul?ll="+W.lat+","+W.lon+"&navigate=yes" : "https://waze.com/ul?q="+encodeURIComponent(dest)+"&navigate=yes";
+  $("r-body").innerHTML =
+    '<div class="r-dest">🏢 <b>'+esc(W.label)+'</b>'+(W.address?'<br><span class="muted">'+esc(W.address)+'</span>':'')+'</div>'+
+    '<div class="r-btns"><a class="btn gmaps" href="'+g+'">🗺️ Google Maps</a><a class="btn waze" href="'+z+'">🚙 Waze</a></div>';
+}
+
+/* =====================================================================
+   Σύστημα
+   ===================================================================== */
+var battery=null;
+if(navigator.getBattery){ navigator.getBattery().then(function(b){ battery=b; renderSystem();
+  b.addEventListener("levelchange",renderSystem); b.addEventListener("chargingchange",renderSystem); }).catch(function(){}); }
+function renderSystem(){
+  var el=$("s-body"); if(!el) return;
+  var rows=[];
+  if(battery){
+    var lv=Math.round(battery.level*100);
+    rows.push('<div class="row"><span class="dot '+(lv>30||battery.charging?"ok":"warn")+'"></span>Μπαταρία '+lv+'%'+(battery.charging?" ⚡":"")+'<span></span></div>');
+  }
+  var keys=Object.keys(STATUS);
+  keys.forEach(function(k){
+    var s=STATUS[k];
+    rows.push('<div class="row"><span class="dot '+(s.ok?"ok":"bad")+'"></span>'+esc(k)+'<span>'+ago(s.t)+'</span></div>');
+  });
+  var up=Math.round((Date.now()-BOOT)/60000);
+  rows.push('<div class="row"><span class="dot"></span>Σε λειτουργία<span>'+(up<60?up+"′":Math.floor(up/60)+" ώρ. "+(up%60)+"′")+'</span></div>');
+  el.innerHTML='<div class="sys-list">'+rows.join("")+'</div>';
+}
+
+/* =====================================================================
+   Demo δεδομένα (για προεπισκόπηση με ?demo=1)
+   ===================================================================== */
+function demoWeather(){
+  var now=new Date(); now.setMinutes(0,0,0);
+  var ht=[],tt=[],pp=[],wc=[],dy=[];
+  for(var i=0;i<48;i++){ var t=new Date(now.getTime()+i*3600000); ht.push(t.toISOString());
+    tt.push(12+5*Math.sin((t.getHours()-9)/24*2*Math.PI)); pp.push([5,10,20,45,60,55,30,15][i%8]); wc.push([2,3,61,63,61,3,2,1][i%8]); dy.push(t.getHours()>6&&t.getHours()<18?1:0); }
+  var dt=[]; for(var d=0;d<5;d++){ var x=new Date(); x.setDate(x.getDate()+d); dt.push(x.getFullYear()+"-"+pad(x.getMonth()+1)+"-"+pad(x.getDate())); }
+  return {current:{temperature_2m:13.4,apparent_temperature:11.2,relative_humidity_2m:72,precipitation:0,weather_code:3,wind_speed_10m:18,wind_direction_10m:20,is_day:1},
+    hourly:{time:ht,temperature_2m:tt,precipitation_probability:pp,weather_code:wc,is_day:dy},
+    daily:{time:dt,weather_code:[63,3,1,0,80],temperature_2m_max:[16,17,19,20,17],temperature_2m_min:[9,10,11,12,11],
+      precipitation_probability_max:[65,20,5,0,40],sunrise:[dt[0]+"T07:12"],sunset:[dt[0]+"T17:10"]}};
+}
+function demoNews(){
+  var n=Date.now();
+  return {gr:[
+    {title:"Νέο πρόγραμμα επιδότησης για ενεργειακή αναβάθμιση κατοικιών",src:"ΕΡΤnews",date:n-12*60000},
+    {title:"Βροχές και πτώση θερμοκρασίας το Σαββατοκύριακο στην Αττική",src:"in.gr",date:n-40*60000},
+    {title:"Επεκτείνεται το δίκτυο λεωφορειακών γραμμών στα Μεσόγεια",src:"ΕΡΤnews",date:n-95*60000},
+    {title:"Ρεκόρ συμμετοχής στον Αυθεντικό Μαραθώνιο της Αθήνας",src:"in.gr",date:n-3*3600000},
+    {title:"Σε δημόσια διαβούλευση το νέο σχέδιο για τις αστικές θερμικές νησίδες",src:"ΕΡΤnews",date:n-5*3600000},
+    {title:"Αυξημένη κίνηση στην Αττική Οδό λόγω έργων συντήρησης",src:"in.gr",date:n-6*3600000}],
+    world:[
+    {title:"EU ministers agree new targets for building renovation",src:"BBC",date:n-20*60000},
+    {title:"Global climate talks enter final week with finance still unresolved",src:"Guardian",date:n-70*60000},
+    {title:"Record solar output reported across southern Europe",src:"BBC",date:n-2*3600000},
+    {title:"New satellite mission to map urban heat in major cities",src:"Guardian",date:n-4*3600000},
+    {title:"Central banks signal pause as inflation cools",src:"BBC",date:n-5*3600000},
+    {title:"Heatwave preparedness plans updated in several EU capitals",src:"Guardian",date:n-7*3600000}]};
+}
+
+/* =====================================================================
+   Εκκίνηση και χρονοδιακόπτες
+   ===================================================================== */
+(function start(){
+  if(DEMO){
+    var dm=location.search.match(/mode=(morning|daily)/);
+    if(dm){ manualMode=dm[1]; manualUntil=Date.now()+86400000; }
+    STATUS={"Καιρός":{ok:true,t:Date.now()-60000},"Ειδήσεις":{ok:true,t:Date.now()-120000},"VPN έλεγχος":{ok:true,t:Date.now()-60000},"ΟΑΣΑ":{ok:true,t:Date.now()-30000}};
+  }
+  tick(); renderSystem(); renderRoute();
+  loadWeather(); loadNews(); loadVPN(); loadPihole(); loadBus();
+  setInterval(tick, 1000*15);
+  setInterval(loadWeather, CONFIG.REFRESH.weather*1000);
+  setInterval(loadNews, CONFIG.REFRESH.news*1000);
+  setInterval(loadVPN, CONFIG.REFRESH.vpn*1000);
+  setInterval(loadPihole, CONFIG.REFRESH.pihole*1000);
+  setInterval(loadBus, CONFIG.REFRESH.bus*1000);
+  setInterval(renderSystem, 60000);
+  // ξαναζωγραφίζει τις ειδήσεις όταν αλλάζει λειτουργία (λιγότερες στο πρωινό)
+  var lastMode=document.body.className;
+  setInterval(function(){ if(document.body.className!==lastMode){ lastMode=document.body.className; drawNews(); } }, 2000);
+  $("mode-btn").addEventListener("click", function(){ setTimeout(drawNews,50); });
+  // πλήρες reload κάθε λίγες ώρες για να μένει "φρέσκο" στο παλιό tablet
+  setTimeout(function(){ location.reload(); }, CONFIG.REFRESH.reloadPageHours*3600000);
+  window.addEventListener("online", function(){ tick(); loadWeather(); loadNews(); loadVPN(); });
+  window.addEventListener("offline", tick);
+})();
+</script>
+
+<!-- Λίστα φωτογραφιών: τη γράφει το dashboard-photos-sync.ps1. Αν λείπει, το φόντο μένει απλό. -->
+<script src="dashboard-photos/photos.js"></script>
+<script>
+/* =====================================================================
+   Φωτογραφίες φόντου (ξεχωριστό από το CONFIG και την υπόλοιπη λογική)
+   ===================================================================== */
+var PHOTOS = { folder: "dashboard-photos/", everyMinutes: 10 };
+(function(){
+  var list = (window.DASH_PHOTOS || []).slice();
+  if(!list.length) return;
+  for(var i=list.length-1;i>0;i--){ var j=Math.floor(Math.random()*(i+1)), t=list[i]; list[i]=list[j]; list[j]=t; }
+  var layers=[document.getElementById("bg-a"), document.getElementById("bg-b")], front=0, idx=0, shown=false;
+  function show(){
+    var src = PHOTOS.folder + list[idx % list.length]; idx++;
+    var img = new Image();
+    img.onload = function(){
+      var back = layers[1-front];
+      back.style.backgroundImage = 'url("'+src+'")';
+      back.className = "bg-img on"; layers[front].className = "bg-img";
+      front = 1-front;
+      if(!shown){ shown=true; document.documentElement.className += " photos"; }
+      // αδειάζει την παλιά στρώση μετά το fade, για να μη μένουν δύο εικόνες στη μνήμη
+      var old = layers[1-front]; setTimeout(function(){ if(old.className==="bg-img") old.style.backgroundImage="none"; }, 2000);
+    };
+    img.onerror = function(){ if(list.length>1){ list.splice((idx-1)%list.length,1); } };
+    img.src = src;
+  }
+  show();
+  if(list.length>1) setInterval(show, PHOTOS.everyMinutes*60000);
+})();
+</script>
+
+<script>
+/* =====================================================================
+   Σπίτι (κουμπιά εφαρμογών) και Coffee corner (ξεχωριστό από το CONFIG)
+   ===================================================================== */
+// Κάρτα Σπίτι: false = κρυμμένη (τα κουμπιά θέλουν ακόμα ρύθμιση στο Fully)
+var HOME_ENABLED = false;
+if(!HOME_ENABLED) document.documentElement.className += " no-home";
+// pkg = όνομα πακέτου Android (το βρίσκεις με: adb shell pm list packages -3)
+var HOME_APPS = [
+  { label: "Σκούπα",       icon: "🧹", pkg: "com.xiaomi.smarthome" },
+  { label: "LED",          icon: "💡", pkg: "" },
+  { label: "Κάμερες",      icon: "📷", pkg: "com.x.srihome" },
+  { label: "TV",           icon: "📺", pkg: "" }
+];
+
+// Pi-hole: όσο δεν έχει στηθεί, η θέση του δίνεται στο Σύστημα (βλ. CSS html.no-pihole)
+if(!CONFIG.PIHOLE.url) document.documentElement.className += " no-pihole";
+
+(function(){
+  var h = document.getElementById("h-body");
+  h.innerHTML = HOME_APPS.map(function(a, i){
+    return '<button class="btn'+(a.pkg?'':' missing')+'" type="button" data-app="'+i+'"><span class="ic">'+a.icon+'</span>'+esc(a.label)+'</button>';
+  }).join("");
+  h.addEventListener("click", function(e){
+    var b = e.target.closest ? e.target.closest("[data-app]") : null; if(!b) return;
+    var a = HOME_APPS[+b.getAttribute("data-app")];
+    if(!a.pkg){ toast("Δεν έχει οριστεί εφαρμογή για: "+a.label); return; }
+    if(window.fully && fully.startApplication){ try{ fully.startApplication(a.pkg); return; }catch(err){} }
+    // χωρίς PLUS δεν υπάρχει το fully.startApplication: ανοίγει την εφαρμογή με intent link
+    location.href = "intent:#Intent;action=android.intent.action.MAIN;category=android.intent.category.LAUNCHER;package="+a.pkg+";end";
+  });
+})();
+
+/* ---- Coffee corner ------------------------------------------------- */
+var WORDS = [
+  ["Καϊμάκι","Ο πηχτός αφρός στην επιφάνεια του ελληνικού καφέ. Χωρίς καϊμάκι, δεν πέτυχε."],
+  ["Μεράκι","Η αγάπη και η ψυχή που βάζεις σε ό,τι κάνεις."],
+  ["Φιλότιμο","Η αίσθηση τιμής και υποχρέωσης απέναντι στους άλλους."],
+  ["Χαρμάνι","Το μείγμα από διαφορετικούς κόκκους καφέ που δίνει τη γεύση."],
+  ["Νόστος","Η επιστροφή στον τόπο σου. Από εδώ βγαίνει η «νοσταλγία»."],
+  ["Θαλπωρή","Η ζεστασιά και η άνεση ενός φιλόξενου χώρου."],
+  ["Αλκυονίδες","Οι ήρεμες, ηλιόλουστες μέρες στην καρδιά του χειμώνα."],
+  ["Μελτέμι","Ο δυνατός βοριάς που φυσά στο Αιγαίο το καλοκαίρι."],
+  ["Λυκαυγές","Το πρώτο αχνό φως λίγο πριν την ανατολή."],
+  ["Λυκόφως","Το μισοσκόταδο μετά τη δύση του ήλιου."],
+  ["Αταραξία","Η γαλήνη του νου, χωρίς ανησυχίες."],
+  ["Ευδαιμονία","Η ουσιαστική, ολοκληρωμένη ευτυχία."],
+  ["Οίστρος","Η έμπνευση, το δημιουργικό πάθος."],
+  ["Ραστώνη","Η ξεκούραστη χαλαρότητα, η νωχέλεια."],
+  ["Κέφι","Η καλή διάθεση για χαρά και διασκέδαση."],
+  ["Μπρίκι","Το μικρό σκεύος με μακρύ χερούλι για τον ελληνικό καφέ."],
+  ["Νηνεμία","Η απόλυτη άπνοια, όταν η θάλασσα γίνεται λάδι."],
+  ["Παρρησία","Το θάρρος να λες ανοιχτά την αλήθεια."],
+  ["Ξενιτιά","Η ζωή μακριά από τον τόπο σου."],
+  ["Λαχτάρα","Η έντονη επιθυμία για κάτι."],
+  ["Καβούρντισμα","Το ψήσιμο των κόκκων καφέ, εκεί γεννιέται το άρωμα."],
+  ["Αειφορία","Η χρήση των πόρων χωρίς να τους εξαντλούμε για τους επόμενους."],
+  ["Αμεριμνησία","Η ξενοιασιά, το να μην έχεις καμία έγνοια."],
+  ["Ευθυμία","Η χαρούμενη, γελαστή διάθεση."],
+  ["Φεγγαρόφωτο","Το ασημένιο φως του φεγγαριού."],
+  ["Καλοκαιρία","Ο καλός, ήπιος καιρός, ακόμα και μέσα στον χειμώνα."],
+  ["Πλησμονή","Ο κορεσμός· όταν κάτι το έχεις παραπάρει."],
+  ["Ιδιοσυγκρασία","Ο χαρακτήρας και η φυσική διάθεση κάποιου."],
+  ["Ευστοχία","Το να πετυχαίνεις ακριβώς τον στόχο."],
+  ["Εφησυχασμός","Η ψεύτικη ησυχία που σε κάνει να χαλαρώνεις την προσοχή σου."],
+  ["Ξεροσφύρι","Το ποτό χωρίς μεζέ. Ούζο στο ξεροσφύρι, ποτέ!"],
+  ["Καφεκοπτείο","Το μαγαζί που καβουρδίζει και αλέθει καφέ."],
+  ["Ακροθαλασσιά","Η άκρη της θάλασσας, εκεί που σκάει το κύμα."],
+  ["Ευγνωμοσύνη","Η αναγνώριση του καλού που σου έκαναν."],
+  ["Στωικός","Αυτός που αντέχει τις δυσκολίες με ψυχραιμία."],
+  ["Φιλοξενία","Η φροντίδα του ξένου σαν να ήταν δικός σου."],
+  ["Λιοπύρι","Ο καυτός ήλιος του καλοκαιρινού μεσημεριού."],
+  ["Χαραμάδα","Η λεπτή σχισμή από όπου τρυπώνει το φως."],
+  ["Καημός","Ο βαθύς πόνος, η λαχτάρα για κάτι χαμένο."],
+  ["Ψυχαγωγία","Ό,τι ξεκουράζει και ευφραίνει την ψυχή."]
+];
+
+function coffeeTemp(){
+  if(DEMO) return Math.round(demoWeather().current.temperature_2m);
+  try{ var c = load("weather"); return c && c.v && c.v.current ? Math.round(c.v.current.temperature_2m) : null; }catch(e){ return null; }
+}
+function coffeeSuggestion(t){
+  if(t === null) return "";
+  if(t >= 24) return "Έξω "+t+"°: μέρα για freddo espresso.";
+  if(t >= 16) return "Έξω "+t+"°: ζεστός ή κρύος, ό,τι τραβάει η όρεξη.";
+  return "Έξω "+t+"°: μέρα για ζεστό καπουτσίνο.";
+}
+function renderCoffee(){
+  var d = new Date(), h = d.getHours(), wd = d.getDay(), weekend = (wd===0 || wd===6);
+  var t = coffeeTemp(), sug = coffeeSuggestion(t), msg, sub;
+  if(h < 5)       { msg = "Ο καφές ξεκουράζεται."; sub = "Καληνύχτα από το coffee corner."; }
+  else if(h < 7)  { msg = "Νωρίς ξύπνησες!"; sub = "Ένας ελληνικός στο μπρίκι για αρχή; " + sug; }
+  else if(h < 10) { msg = weekend ? "Σαββατοκύριακο: καφές χωρίς βιασύνη ☕" : "Ώρα για τον πρωινό καφέ ☕"; sub = sug; }
+  else if(h < 12) { msg = "Ώρα για δεύτερο καφέ;"; sub = sug; }
+  else if(h < 15) { msg = "Ένας espresso μετά το φαγητό;"; sub = sug; }
+  else if(h < 17) { msg = "Απογευματινός καφές; Προλαβαίνεις ακόμα."; sub = sug; }
+  else if(h < 20) { msg = "Μετά τις 5, καλύτερα decaf."; sub = "Ή ένα τσάι, για να κοιμηθείς καλά."; }
+  else            { msg = "Ώρα για χαμομήλι."; sub = "Ο καφές περιμένει μέχρι το πρωί."; }
+  $("cf-msg").textContent = msg;
+  $("cf-sub").textContent = sub;
+  // ίδια λέξη όλη τη μέρα, αλλάζει τα μεσάνυχτα
+  var start = new Date(d.getFullYear(), 0, 1), day = Math.floor((d - start) / 86400000);
+  var w = WORDS[day % WORDS.length];
+  $("cf-word").textContent = w[0];
+  $("cf-mean").textContent = w[1];
+}
+renderCoffee();
+setInterval(renderCoffee, 60000);
+</script>
+
+<script>
+/* =====================================================================
+   Telegram: πάτημα σε είδηση = τη στέλνει στο κινητό (ξεχωριστό από το CONFIG)
+   Το token του bot (στο dashboard-config.js) επιτρέπει ΜΟΝΟ αποστολή ως αυτό το bot.
+   ===================================================================== */
+var TELEGRAM = (window.LOCAL && LOCAL.TELEGRAM) || { botToken: "", chatId: "" };
+(function(){
+  var sentAt = {};
+  $("n-body").addEventListener("click", function(e){
+    var it = e.target.closest ? e.target.closest(".n-item") : null; if(!it) return;
+    if(!TELEGRAM.botToken || !TELEGRAM.chatId){ toast("Το Telegram δεν έχει ρυθμιστεί ακόμα"); return; }
+    var title = it.getAttribute("data-title"), link = it.getAttribute("data-link"), src = it.getAttribute("data-src");
+    if(sentAt[title] && Date.now()-sentAt[title] < 15000){ toast("Το έστειλες ήδη ✓"); return; }
+    it.className += " sending";
+    var text = "📰 " + title + (src ? "\n(" + src + ")" : "") + (link ? "\n" + link : "");
+    var body = "chat_id=" + encodeURIComponent(TELEGRAM.chatId) + "&text=" + encodeURIComponent(text);
+    fetchT("https://api.telegram.org/bot" + TELEGRAM.botToken + "/sendMessage",
+      { method:"POST", headers:{ "Content-Type":"application/x-www-form-urlencoded" }, body: body }, 10000)
+    .then(function(r){ return r.json(); })
+    .then(function(j){ if(!j.ok) throw new Error(j.description || "Telegram"); sentAt[title] = Date.now(); toast("Στάλθηκε στο Telegram ✓"); })
+    .catch(function(err){ toast("Δεν στάλθηκε: " + err.message); })
+    .then(function(){ it.className = it.className.replace(" sending",""); });
+  });
+})();
+</script>
+<div id="pager"><i class="on"></i><i></i><i></i></div>
+<div id="nightv"><div id="nv-inner"><div id="nv-clock">--:--</div><div id="nv-date"></div><div id="nv-wx"></div><div id="nv-ph"></div></div></div>
+<script src="dashboard-extras.js"></script>
+<script src="dashboard-calendar.js"></script>
+<script src="dashboard-spotify.js"></script>
+</body>
+</html>

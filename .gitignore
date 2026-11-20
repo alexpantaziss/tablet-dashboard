@@ -1,0 +1,17 @@
+# Προσωπικές ρυθμίσεις και κλειδιά: ΠΟΤΕ στο GitHub
+dashboard/dashboard-config.js
+_backup-before-split/
+
+# Φωτογραφίες (προσωπικές / τρίτων)
+dashboard/dashboard-photos/
+4K Wallpaper  Dump REUPLOAD/
+
+# Προγράμματα τρίτων (adb, APK του Fully): κατεβαίνουν από τις επίσημες σελίδες
+tools/Android/
+
+# Προσωπικά αρχεία της εγκατάστασης (στοιχεία συσκευής, ραντεβού, δίκτυο)
+/screenshots/
+tablet-setup-log.md
+tablet-final-report.md
+packages-before.txt
+dashboard/dashboard.original.html
