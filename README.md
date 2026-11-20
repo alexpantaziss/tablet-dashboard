@@ -21,7 +21,7 @@
 
 - **Καιρός** από [Open-Meteo](https://open-meteo.com/): τώρα, ωριαία βροχή, πρόγνωση 3 ημερών, αέρας, UV και γύρη.
 - **Ειδήσεις** από RSS, με αυτόματη κύλιση. Αν πατήσεις ένα θέμα, το στέλνει στο κινητό σου μέσω Telegram.
-- **Λεωφορεία ΟΑΣΑ** σε πραγματικό χρόνο, για όσες στάσεις θέλεις.
+- **Λεωφορεία ΟΑΣΑ** σε πραγματικό χρόνο, για όσες στάσεις θέλεις. Πάτημα στην κάρτα: χάρτης με τις διαδρομές και τα λεωφορεία ζωντανά.
 - **Ημερολόγιο** από iCal: iCloud, Google, Outlook και ελληνικές αργίες. Μικρός μήνας στην κύρια οθόνη και μεγάλος στη δική του.
 - **Spotify:** όσο παίζει μουσική, η κάρτα «Coffee corner» γίνεται «Παίζει τώρα», με κουμπιά. Τα κουμπιά θέλουν Premium.
 - **Εφημερεύοντα φαρμακεία** από το vrisko.gr, ταξινομημένα κατά απόσταση.
@@ -38,6 +38,7 @@ dashboard/
   dashboard-extras.js            αέρας, φαρμακεία, οθόνες με σύρσιμο, νύχτα, εντολές Telegram
   dashboard-calendar.js          ημερολόγια iCal (με επαναλήψεις RRULE), μικρός και μεγάλος μήνας
   dashboard-spotify.js           κάρτα "Παίζει τώρα"
+  dashboard-busmap.js            χάρτης λεωφορείων (Leaflet, πλακίδια Esri Dark Gray)
   dashboard-config.example.js    πρότυπο για τις προσωπικές ρυθμίσεις
 tools/
   dashboard-photos-sync.ps1      φωτογραφίες σε 1280x800 και αποστολή στο tablet
@@ -51,7 +52,7 @@ tools/
 2. **Δοκιμή στον υπολογιστή.** Άνοιξε το `dashboard/dashboard.html` στον browser. Με `?demo=1` στο τέλος της διεύθυνσης βλέπεις δοκιμαστικά δεδομένα.
 3. **Στο tablet.** Ενεργοποίησε το USB debugging και αντίγραψε τα αρχεία:
    ```
-   adb push dashboard/dashboard.html dashboard/dashboard-extras.js dashboard/dashboard-calendar.js dashboard/dashboard-spotify.js dashboard/dashboard-config.js /sdcard/Download/
+   adb push dashboard/dashboard.html dashboard/dashboard-extras.js dashboard/dashboard-calendar.js dashboard/dashboard-spotify.js dashboard/dashboard-busmap.js dashboard/dashboard-config.js /sdcard/Download/
    ```
    Αντί για adb μπορείς να τα αντιγράψεις και μέσω USB στον φάκελο Download.
 4. **Fully Kiosk.** Start URL: `file:///sdcard/Download/dashboard.html`. Ενεργοποίησε Fullscreen, Keep Screen On, Launch on Boot και οριζόντιο προσανατολισμό. Η δωρεάν έκδοση αρκεί.

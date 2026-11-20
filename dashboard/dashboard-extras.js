@@ -240,6 +240,7 @@ document.addEventListener("touchstart", function(e){ var t=e.touches[0]; sx=t.cl
 document.addEventListener("touchend", function(e){
   var t=e.changedTouches[0], dx=t.clientX-sx, dy=t.clientY-sy;
   if(Date.now()-st>800 || Math.abs(dx)<90 || Math.abs(dy)>Math.abs(dx)*0.6) return;
+  if(/\bmap-open\b/.test(root.className)) return;   // στον χάρτη λεωφορείων το σύρσιμο μετακινεί τον χάρτη
   if(body.className.indexOf("night")>=0 && !/\bawake\b/.test(root.className)) return;
   setScreen(curScreen + (dx<0 ? 1 : -1));
 }, {passive:true});
