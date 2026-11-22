@@ -17,3 +17,6 @@ tablet-setup-log.md
 tablet-final-report.md
 packages-before.txt
 dashboard/dashboard.original.html
+
+# Η εφαρμογή kiosk έχει δικό της git
+kiosk-app/
