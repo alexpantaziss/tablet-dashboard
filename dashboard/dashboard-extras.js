@@ -322,7 +322,7 @@ function pollTelegram(){
       // εντολές από άλλα αρχεία (π.χ. dashboard-outdoor.js): window.tgCommand(c) επιστρέφει κείμενο ή Promise
       var ext = typeof window.tgCommand==="function" ? window.tgCommand(c) : null;
       if(ext) return Promise.resolve(ext).then(function(t){ return t ? tgReply(t) : null; });
-      if(c!=="start") return tgReply("Εντολές: refresh (ανανέωση), status (κατάσταση), πότισμα, τρέξιμο, σεισμοί, αεροπλάνα");
+      if(c!=="start") return tgReply("Εντολές: refresh (ανανέωση), status (κατάσταση), screenshot (οθόνη), υγεία, πότισμα, τρέξιμο, σεισμοί, αεροπλάνα");
     });
   }).catch(function(){}).then(function(){ tgBusy=false; });
 }

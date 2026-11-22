@@ -49,6 +49,7 @@ dashboard/
   dashboard-outdoor.js           οθόνη 4 "Έξω": πότισμα, τρέξιμο, αεροπλάνα, σεισμοί
   dashboard-frame.js             κορνίζα, φωτογραφίες iCloud, θέμα μέρας και νύχτας
   dashboard-traffic.js           χρόνος διαδρομής (TomTom)
+  dashboard-kiosk.js             γέφυρα με τη δική μας εφαρμογή kiosk: screenshot, υγεία, φωτεινότητα
   dashboard-config.example.js    πρότυπο για τις προσωπικές ρυθμίσεις
   dashboard-secrets.example.js   πρότυπο για τα μυστικά (κλειδί TomTom, link του album)
 tools/
@@ -61,7 +62,7 @@ tools/
 2. **Δοκιμή στον υπολογιστή.** Άνοιξε το `dashboard/dashboard.html` στον browser. Με `?demo=1` στο τέλος της διεύθυνσης βλέπεις δοκιμαστικά δεδομένα.
 3. **Στο tablet.** Ενεργοποίησε το USB debugging και αντίγραψε τα αρχεία:
    ```
-   adb push dashboard/dashboard.html dashboard/dashboard-extras.js dashboard/dashboard-calendar.js dashboard/dashboard-spotify.js dashboard/dashboard-busmap.js dashboard/dashboard-outdoor.js dashboard/dashboard-frame.js dashboard/dashboard-traffic.js dashboard/dashboard-config.js dashboard/dashboard-secrets.js /sdcard/Download/
+   adb push dashboard/dashboard.html dashboard/dashboard-extras.js dashboard/dashboard-calendar.js dashboard/dashboard-spotify.js dashboard/dashboard-busmap.js dashboard/dashboard-outdoor.js dashboard/dashboard-frame.js dashboard/dashboard-traffic.js dashboard/dashboard-kiosk.js dashboard/dashboard-config.js dashboard/dashboard-secrets.js /sdcard/Download/
    ```
    Αντί για adb μπορείς να τα αντιγράψεις και μέσω USB στον φάκελο Download.
    Το WebView κρατάει τα .js στην cache: όταν αλλάζεις ένα αρχείο, άλλαξε και το `?v=...` στις γραμμές `<script>` του `dashboard.html`.
