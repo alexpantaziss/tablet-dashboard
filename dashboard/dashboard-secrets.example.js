@@ -5,5 +5,7 @@ var SECRETS = {
   // Κοινόχρηστο album iCloud: Φωτογραφίες > το album > Κοινή χρήση > "Δημόσιο link". Μορφή https://photos.icloud.com/shared/album/...
   ICLOUD_ALBUM_URL: "",
   // Κλειδί TomTom (developer.tomtom.com > Dashboard > Keys), για τον χρόνο διαδρομής
-  TOMTOM_KEY: ""
+  TOMTOM_KEY: "",
+  // Κλειδί Gemini (aistudio.google.com/apikey), για συνομιλία στο Telegram. Κενό = χωρίς AI
+  GEMINI_KEY: ""
 };

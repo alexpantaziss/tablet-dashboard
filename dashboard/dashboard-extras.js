@@ -304,7 +304,8 @@ var TG_MENU = [
 ];
 var TG_HELP = "Πάτα ένα κουμπί από κάτω ή γράψε την εντολή:\n" +
   "📸 οθόνη · 📷 κάμερα · 🎥 βίντεο\n✅ κατάσταση · ❤️ υγεία · 🔄 ανανέωση\n🌱 πότισμα · 🏃 τρέξιμο · 🌍 σεισμοί · ✈️ αεροπλάνα\n" +
-  "⬇️ ενημέρωση (dashboard) · ↩️ επαναφορά · ⬆️ αναβάθμιση (εφαρμογή)\nΌλες υπάρχουν και στο μενού / δίπλα στο πεδίο κειμένου.";
+  "⬇️ ενημέρωση (dashboard) · ↩️ επαναφορά · ⬆️ αναβάθμιση (εφαρμογή)\nΌλες υπάρχουν και στο μενού / δίπλα στο πεδίο κειμένου." +
+  (window.SECRETS && SECRETS.GEMINI_KEY ? "\n🤖 Ό,τι άλλο γράψεις, απαντά το Gemini. «ξέχνα» = νέα συζήτηση." : "");
 function tgReply(text){ return tgApi("sendMessage", { chat_id:TELEGRAM.chatId, text:text, reply_markup:JSON.stringify(TG_KEYS) }).catch(function(){}); }
 // Το μενού "/" ορίζεται μία φορά (και ξανά μόνο αν αλλάξει η λίστα)
 function tgSetMenu(){
@@ -319,18 +320,24 @@ function pollTelegram(){
   tgBusy=true;
   tgApi("getUpdates", tgOffset ? { offset:tgOffset, timeout:0 } : { timeout:0 }).then(function(j){
     if(!j.ok) return;
-    var cmds=[];
+    var cmds=[], raws=[];
     j.result.forEach(function(u){
       tgOffset = u.update_id+1;
       var m=u.message; if(!m || String(m.chat.id)!==String(TELEGRAM.chatId) || !m.text) return;
       if(Date.now()/1000 - m.date > 600) return;   // αγνόησε παλιά μηνύματα (π.χ. μετά από reboot)
       // "📸 Οθόνη" -> "οθόνη", "/screenshot@bot" -> "screenshot"
+      raws.push(m.text.trim());
       cmds.push(m.text.trim().replace(/^[^A-Za-z0-9Ͱ-Ͽἀ-῿\/]+/, "").replace(/^\//, "").replace(/@\S+$/, "").trim().toLowerCase());
     });
     if(!cmds.length) return;
     // επιβεβαίωση στο Telegram ότι διαβάστηκαν, ώστε να μην ξανατρέξουν μετά το reload
     return tgApi("getUpdates", { offset:tgOffset, timeout:0 }).then(function(){
-      var c=cmds[cmds.length-1];
+      return tgHandle(cmds[cmds.length-1], raws[raws.length-1]);
+    });
+  }).catch(function(){}).then(function(){ tgBusy=false; });
+}
+// Εκτελεί μία εντολή. c: η εντολή καθαρή (π.χ. "οθόνη"), raw: το μήνυμα όπως γράφτηκε (για το AI).
+function tgHandle(c, raw){
       if(/^(refresh|reload|ανανέωση|ανανεωση)$/.test(c)){
         return tgReply("🔄 Ανανεώνεται το dashboard...").then(function(){ location.reload(); });
       }
@@ -349,10 +356,16 @@ function pollTelegram(){
       // εντολές από άλλα αρχεία (π.χ. dashboard-outdoor.js): window.tgCommand(c) επιστρέφει κείμενο ή Promise
       var ext = typeof window.tgCommand==="function" ? window.tgCommand(c) : null;
       if(ext) return Promise.resolve(ext).then(function(t){ return t ? tgReply(t) : null; });
-      return tgReply((/^(βοήθεια|βοηθεια|help|start|εντολές|εντολες)$/.test(c) ? "" : "Δεν την ξέρω αυτή. ") + TG_HELP);
-    });
-  }).catch(function(){}).then(function(){ tgBusy=false; });
+      if(/^(βοήθεια|βοηθεια|help|start|εντολές|εντολες)$/.test(c)) return tgReply(TG_HELP);
+      // ό,τι δεν είναι εντολή πάει στο AI (dashboard-ai.js), αν έχει οριστεί κλειδί
+      if(window.aiChat && raw){
+        tgApi("sendChatAction", { chat_id:TELEGRAM.chatId, action:"typing" }).catch(function(){});
+        return window.aiChat(raw).then(function(t){ return t ? tgReply(t) : null; });
+      }
+      return tgReply("Δεν την ξέρω αυτή. " + TG_HELP);
 }
+// Για το AI: τρέχει μια εντολή σαν να την έγραψες εσύ
+window.tgRun = function(c){ return tgHandle(c, ""); };
 var START_T = Date.now();
 
 /* ---------- εκκίνηση ---------- */

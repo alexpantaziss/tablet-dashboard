@@ -543,9 +543,9 @@
 <div id="toast"></div>
 
 <!-- Προσωπικές ρυθμίσεις και κλειδιά (δεν ανεβαίνουν στο GitHub). Αν λείπει, η σελίδα δουλεύει με τις προεπιλογές. -->
-<script src="dashboard-config.js?v=20261122e"></script>
+<script src="dashboard-config.js?v=20261122f"></script>
 <!-- Μυστικά (κλειδί TomTom, link του album iCloud): ξεχωριστό αρχείο, στο .gitignore -->
-<script src="dashboard-secrets.js?v=20261122e"></script>
+<script src="dashboard-secrets.js?v=20261122f"></script>
 <script>
 /* =====================================================================
    CONFIG: όλες οι ρυθμίσεις είναι εδώ
@@ -610,6 +610,9 @@ var CONFIG = {
     reportDownMin: 60,       // ειδοποίηση αν μια πηγή (ΟΑΣΑ, καιρός...) δεν απαντά τόσα λεπτά
     quietAtNight: true       // τη νύχτα οι αναφορές έρχονται χωρίς ήχο ειδοποίησης
   },
+  // Συνομιλία με το Gemini στο Telegram (dashboard-ai.js). Κλειδί: GEMINI_KEY στο dashboard-secrets.js.
+  // model: κενό = το νεότερο "flash" της Google. memoryMin: πόσα λεπτά θυμάται τη συζήτηση.
+  AI: { enabled: true, model: "", memoryMin: 30, historyMax: 12, screenChars: 6000 },
   // Ενημέρωση από απόσταση (Telegram "update"): από ποιο repo του GitHub. Το repo μπαίνει στο dashboard-config.js.
   UPDATE: { repo: (window.LOCAL && LOCAL.UPDATE_REPO) || "", branch: "main", path: "dashboard" },
 
@@ -1286,13 +1289,14 @@ var TELEGRAM = (window.LOCAL && LOCAL.TELEGRAM) || { botToken: "", chatId: "" };
 <div id="pager"><i class="on"></i><i></i><i></i><i></i></div>
 <div id="nightv"><div id="nv-inner"><div id="nv-clock">--:--</div><div id="nv-date"></div><div id="nv-wx"></div><div id="nv-ph"></div></div></div>
 <!-- ?v=...: το WebView κρατάει τα .js στην cache. Όταν αλλάζεις ένα αρχείο, άλλαξε το v σε όλες τις γραμμές (π.χ. τη σημερινή ημερομηνία). -->
-<script src="dashboard-extras.js?v=20261122e"></script>
-<script src="dashboard-calendar.js?v=20261122e"></script>
-<script src="dashboard-spotify.js?v=20261122e"></script>
-<script src="dashboard-busmap.js?v=20261122e"></script>
-<script src="dashboard-outdoor.js?v=20261122e"></script>
-<script src="dashboard-traffic.js?v=20261122e"></script>
-<script src="dashboard-frame.js?v=20261122e"></script>
-<script src="dashboard-kiosk.js?v=20261122e"></script>
+<script src="dashboard-extras.js?v=20261122f"></script>
+<script src="dashboard-calendar.js?v=20261122f"></script>
+<script src="dashboard-spotify.js?v=20261122f"></script>
+<script src="dashboard-busmap.js?v=20261122f"></script>
+<script src="dashboard-outdoor.js?v=20261122f"></script>
+<script src="dashboard-traffic.js?v=20261122f"></script>
+<script src="dashboard-frame.js?v=20261122f"></script>
+<script src="dashboard-kiosk.js?v=20261122f"></script>
+<script src="dashboard-ai.js?v=20261122f"></script>
 </body>
 </html>
