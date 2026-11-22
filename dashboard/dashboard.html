@@ -612,7 +612,8 @@ var CONFIG = {
   },
   // Συνομιλία με το Gemini στο Telegram (dashboard-ai.js). Κλειδί: GEMINI_KEY στο dashboard-secrets.js.
   // model: κενό = το νεότερο "flash" της Google. memoryMin: πόσα λεπτά θυμάται τη συζήτηση.
-  AI: { enabled: true, model: "", memoryMin: 30, historyMax: 12, screenChars: 6000 },
+  // telegram: false = στο Telegram μόνο εντολές, χωρίς AI (για να μην ξοδεύονται tokens)
+  AI: { enabled: true, telegram: false, model: "", memoryMin: 30, historyMax: 12, screenChars: 6000 },
   // Ενημέρωση από απόσταση (Telegram "update"): από ποιο repo του GitHub. Το repo μπαίνει στο dashboard-config.js.
   UPDATE: { repo: (window.LOCAL && LOCAL.UPDATE_REPO) || "", branch: "main", path: "dashboard" },
 

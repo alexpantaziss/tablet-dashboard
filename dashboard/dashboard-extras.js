@@ -305,7 +305,7 @@ var TG_MENU = [
 var TG_HELP = "Πάτα ένα κουμπί από κάτω ή γράψε την εντολή:\n" +
   "📸 οθόνη · 📷 κάμερα · 🎥 βίντεο\n✅ κατάσταση · ❤️ υγεία · 🔄 ανανέωση\n🌱 πότισμα · 🏃 τρέξιμο · 🌍 σεισμοί · ✈️ αεροπλάνα\n" +
   "⬇️ ενημέρωση (dashboard) · ↩️ επαναφορά · ⬆️ αναβάθμιση (εφαρμογή)\nΌλες υπάρχουν και στο μενού / δίπλα στο πεδίο κειμένου." +
-  (window.SECRETS && SECRETS.GEMINI_KEY ? "\n🤖 Ό,τι άλλο γράψεις, απαντά το Gemini. «ξέχνα» = νέα συζήτηση." : "");
+  (window.SECRETS && SECRETS.GEMINI_KEY && window.CONFIG && CONFIG.AI && CONFIG.AI.telegram ?"\n🤖 Ό,τι άλλο γράψεις, απαντά το Gemini. «ξέχνα» = νέα συζήτηση." : "");
 function tgReply(text){ return tgApi("sendMessage", { chat_id:TELEGRAM.chatId, text:text, reply_markup:JSON.stringify(TG_KEYS) }).catch(function(){}); }
 // Το μενού "/" ορίζεται μία φορά (και ξανά μόνο αν αλλάξει η λίστα)
 function tgSetMenu(){
@@ -358,7 +358,7 @@ function tgHandle(c, raw){
       if(ext) return Promise.resolve(ext).then(function(t){ return t ? tgReply(t) : null; });
       if(/^(βοήθεια|βοηθεια|help|start|εντολές|εντολες)$/.test(c)) return tgReply(TG_HELP);
       // ό,τι δεν είναι εντολή πάει στο AI (dashboard-ai.js), αν έχει οριστεί κλειδί
-      if(window.aiChat && raw){
+      if(window.aiChat && raw && CONFIG.AI && CONFIG.AI.telegram){   // κλειστό: το AI είναι μόνο τοπικά στο tablet
         tgApi("sendChatAction", { chat_id:TELEGRAM.chatId, action:"typing" }).catch(function(){});
         return window.aiChat(raw).then(function(t){ return t ? tgReply(t) : null; });
       }
