@@ -2,6 +2,8 @@
 <html lang="el">
 <head>
 <meta charset="utf-8">
+<!-- Κρατάει τα σφάλματα JavaScript από την πρώτη στιγμή, για την αναφορά σφαλμάτων (dashboard-kiosk.js) -->
+<script>window.__errs=[];window.addEventListener("error",function(e){if(__errs.length<20)__errs.push({t:Date.now(),m:(e.message||"σφάλμα")+" ("+String(e.filename||"").split("/").pop().split("?")[0]+":"+(e.lineno||0)+")"});});</script>
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
 <meta name="theme-color" content="#0b0f17">
 <title>Home Control Center</title>
@@ -541,9 +543,9 @@
 <div id="toast"></div>
 
 <!-- Προσωπικές ρυθμίσεις και κλειδιά (δεν ανεβαίνουν στο GitHub). Αν λείπει, η σελίδα δουλεύει με τις προεπιλογές. -->
-<script src="dashboard-config.js?v=20261122b"></script>
+<script src="dashboard-config.js?v=20261122c"></script>
 <!-- Μυστικά (κλειδί TomTom, link του album iCloud): ξεχωριστό αρχείο, στο .gitignore -->
-<script src="dashboard-secrets.js?v=20261122b"></script>
+<script src="dashboard-secrets.js?v=20261122c"></script>
 <script>
 /* =====================================================================
    CONFIG: όλες οι ρυθμίσεις είναι εδώ
@@ -600,8 +602,16 @@ var CONFIG = {
     batteryHotC: 45,         // ειδοποίηση στο Telegram αν η μπαταρία φτάσει τόσους βαθμούς
     batteryCoolC: 40,        // και ξανά όταν πέσει κάτω από αυτούς
     healthEveryMin: 5,       // κάθε πόσο ελέγχεται η θερμοκρασία
-    shotQuality: 80          // ποιότητα του screenshot (JPEG, 30 έως 95)
+    shotQuality: 80,         // ποιότητα του screenshot (JPEG, 30 έως 95)
+    wifiRestartMin: 5,       // φύλακας Wi-Fi: επανεκκίνηση του Wi-Fi μετά από τόσα λεπτά χωρίς σύνδεση (0 = ποτέ)
+    cameraFacing: "front",   // "front" (προς το δωμάτιο) ή "back"
+    videoSec: 10,            // διάρκεια βίντεο από το Telegram (2 έως 30)
+    reportErrors: true,      // αναφορά σφαλμάτων στο Telegram
+    reportDownMin: 60,       // ειδοποίηση αν μια πηγή (ΟΑΣΑ, καιρός...) δεν απαντά τόσα λεπτά
+    quietAtNight: true       // τη νύχτα οι αναφορές έρχονται χωρίς ήχο ειδοποίησης
   },
+  // Ενημέρωση από απόσταση (Telegram "update"): από ποιο repo του GitHub. Το repo μπαίνει στο dashboard-config.js.
+  UPDATE: { repo: (window.LOCAL && LOCAL.UPDATE_REPO) || "", branch: "main", path: "dashboard" },
 
   // Στάσεις ΟΑΣΑ: ο κωδικός στάσης (StopCode) φαίνεται στην εφαρμογή OASA Telematics
   // ή στο telematics.oasa.gr. Μπορείς να βάλεις πάνω από μία.
@@ -1276,13 +1286,13 @@ var TELEGRAM = (window.LOCAL && LOCAL.TELEGRAM) || { botToken: "", chatId: "" };
 <div id="pager"><i class="on"></i><i></i><i></i><i></i></div>
 <div id="nightv"><div id="nv-inner"><div id="nv-clock">--:--</div><div id="nv-date"></div><div id="nv-wx"></div><div id="nv-ph"></div></div></div>
 <!-- ?v=...: το WebView κρατάει τα .js στην cache. Όταν αλλάζεις ένα αρχείο, άλλαξε το v σε όλες τις γραμμές (π.χ. τη σημερινή ημερομηνία). -->
-<script src="dashboard-extras.js?v=20261122b"></script>
-<script src="dashboard-calendar.js?v=20261122b"></script>
-<script src="dashboard-spotify.js?v=20261122b"></script>
-<script src="dashboard-busmap.js?v=20261122b"></script>
-<script src="dashboard-outdoor.js?v=20261122b"></script>
-<script src="dashboard-traffic.js?v=20261122b"></script>
-<script src="dashboard-frame.js?v=20261122b"></script>
-<script src="dashboard-kiosk.js?v=20261122b"></script>
+<script src="dashboard-extras.js?v=20261122c"></script>
+<script src="dashboard-calendar.js?v=20261122c"></script>
+<script src="dashboard-spotify.js?v=20261122c"></script>
+<script src="dashboard-busmap.js?v=20261122c"></script>
+<script src="dashboard-outdoor.js?v=20261122c"></script>
+<script src="dashboard-traffic.js?v=20261122c"></script>
+<script src="dashboard-frame.js?v=20261122c"></script>
+<script src="dashboard-kiosk.js?v=20261122c"></script>
 </body>
 </html>

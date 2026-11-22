@@ -32,6 +32,9 @@ var LOCAL = {
     { name: "Αργίες", color: "#ff8fb1", url: "https://calendar.google.com/calendar/ical/el.greek%23holiday%40group.v.calendar.google.com/public/basic.ics" }
   ],
 
+  // Ενημέρωση από απόσταση (Telegram "update", μόνο με την εφαρμογή kiosk-app): το repo στο GitHub, μορφή "χρήστης/repo"
+  UPDATE_REPO: "",
+
   // Spotify: εφαρμογή στο developer.spotify.com με Redirect URI http://127.0.0.1:8888/callback.
   // Το refreshToken βγαίνει με: CLIENT_ID=... CLIENT_SECRET=... node tools/spotify-auth.mjs dashboard/dashboard-config.js
   SPOTIFY: { clientId: "", clientSecret: "", refreshToken: "" }
