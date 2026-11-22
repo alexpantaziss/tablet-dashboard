@@ -291,6 +291,19 @@ $("m-grid").addEventListener("click", function(e){
 var prevShown = window.onScreenShown;
 window.onScreenShown = function(n){ if(prevShown) prevShown(n); if(n===2){ monthReset(); drawMonth(); } };
 
+// Για την κορνίζα (dashboard-frame.js): το επόμενο γεγονός με ώρα μέσα στις επόμενες 7 ημέρες,
+// αλλιώς το ολοήμερο της σημερινής μέρας. null αν δεν υπάρχει τίποτα.
+window.calNext = function(){
+  if(!CAL_EVENTS) return null;
+  var now=new Date(), today=startOfDay(now);
+  var timed=occurrences(CAL_EVENTS, now, addDays(today,8))
+    .filter(function(o){ return !o.allDay && o.start>=now; }).sort(function(a,b){ return a.start-b.start; })[0];
+  if(timed){ var dd=Math.round((startOfDay(timed.start)-today)/86400000);
+    return { title:timed.title, start:timed.start, allDay:false, tomorrow:dd===1, day: dd>1 ? DAYS_S[timed.start.getDay()] : "" }; }
+  var ad=occurrences(CAL_EVENTS, today, addDays(today,1)).filter(function(o){ return o.allDay; })[0];
+  return ad ? { title:ad.title, start:ad.start, allDay:true, tomorrow:false } : null;
+};
+
 drawMini();      // ο μικρός μήνας φαίνεται αμέσως, οι κουκκίδες έρχονται με τη φόρτωση
 loadCalendar();
 setInterval(loadCalendar, CAL_EVERY_MIN*60000);

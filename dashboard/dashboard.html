@@ -233,10 +233,6 @@
 
   /* Διαδρομή */
   .r-dest{font-size:1.3125rem;margin-bottom:.875rem;line-height:1.35}
-  .r-btns{display:grid;grid-template-columns:1fr 1fr;gap:.625rem}
-  .r-btns .btn{min-height:4.25rem;padding:0 .75rem;font-size:1.25rem;font-weight:600;white-space:nowrap}
-  .btn.gmaps{background:rgba(61,220,143,.15);border-color:rgba(61,220,143,.34)}
-  .btn.waze{background:rgba(124,192,255,.15);border-color:rgba(124,192,255,.34)}
 
   /* Νυχτερινό χαμήλωμα και ειδοποίηση */
   #dim{position:fixed;top:0;right:0;bottom:0;left:0;background:#000;opacity:0;pointer-events:none;transition:opacity 2s}
@@ -354,28 +350,55 @@
   #nv-ph{font-size:1.125rem;margin-top:.75rem;color:#5c646f;max-width:46rem}
 
   @media (prefers-reduced-motion:reduce){ .n-fade{animation:none} #dim,#toast{transition:none} }
-
-  /* Φωτογραφίες φόντου (προαιρετικές). Η κλάση "photos" μπαίνει στο <html>, όχι στο <body>,
-     γιατί το JS των λειτουργιών ξαναγράφει όλο το body.className.
-     Δύο στρώσεις για crossfade μία φορά κάθε λίγα λεπτά, χωρίς blur. Από πάνω σκούρο φίλτρο
-     και πιο σκούρα κάρτες, ώστε το κείμενο να μένει ευανάγνωστο σε οποιαδήποτε φωτογραφία. */
-  #bg{position:fixed;top:0;right:0;bottom:0;left:0;z-index:0;display:none;background:var(--bg)}
-  html.photos #bg{display:block}
-  .bg-img{position:absolute;top:0;right:0;bottom:0;left:0;background-size:cover;background-position:center;
-          opacity:0;transition:opacity 1.5s ease}
-  .bg-img.on{opacity:1}
-  #bg-shade{position:absolute;top:0;right:0;bottom:0;left:0;
-    background:linear-gradient(to bottom, rgba(0,0,0,.42) 0, rgba(0,0,0,0) 9rem), rgba(4,6,10,.50)}
   #app{position:relative;z-index:1}
-  #dim{z-index:5} #toast{z-index:6}
-  html.photos .card{background:rgba(12,16,22,.74);border-color:rgba(255,255,255,.12)}
-  html.photos .pill{background:rgba(12,16,22,.66)}
-  @media (prefers-reduced-motion:reduce){ .bg-img{transition:none} }
+  #dim{z-index:5} #toast{z-index:9}
+
+  /* ------------------------------------------------------------------
+     ΘΕΜΑ (Apple HIG, dark-mode.md, color.md): φωτεινό τη μέρα, σκούρο από τη δύση ως την ανατολή.
+     Η κλάση light ή dark μπαίνει στο <html> από το dashboard-frame.js. Επίπεδα όπως στο iOS:
+     φόντο (grouped background), κάρτες, στοιχεία μέσα σε κάρτες. Χωρίς σκιές και χωρίς blur.
+     Αντίθεση πάνω στις κάρτες: κύριο κείμενο 17:1, δευτερεύον 10:1, τρίτο επίπεδο 6:1, χρώματα κατάστασης από 5:1.
+     ------------------------------------------------------------------ */
+  html.dark{
+    --bg:#000000; --surface:#1c1c1e; --surface-2:#2c2c2e; --surface-press:#3a3a3c; --hairline:#38383a;
+    --fill-2:rgba(120,120,128,.36); --chart-a:#98989f;
+    --text:#ffffff; --text-2:#c7c7cc; --text-3:#98989f;
+    --accent:#5ab0ff; --ok:#30d158; --warn:#ffb340; --bad:#ff7b72;
+    --tint:rgba(90,176,255,.16); --tint-text:#cfe6ff; --on-accent:#00111f;
+    color-scheme:dark}
+  html.light{
+    --bg:#f2f2f7; --surface:#ffffff; --surface-2:#f2f2f7; --surface-press:#e5e5ea; --hairline:#d8d8dc;
+    --fill-2:rgba(120,120,128,.2); --chart-a:#8e8e93;
+    --text:#1c1c1e; --text-2:#3c3c43; --text-3:#636366;
+    --accent:#0060c7; --ok:#1e7e34; --warn:#a64b00; --bad:#c4001a;
+    --tint:rgba(0,96,199,.09); --tint-text:#00428a; --on-accent:#ffffff;
+    color-scheme:light}
+  :root{--fill-2:rgba(255,255,255,.18); --chart-a:#b1bac6; --tint:rgba(124,192,255,.16); --tint-text:#d3e9ff; --on-accent:#06121f}
+  html.light body, html.dark body{background:var(--bg)}
+  html.light .card, html.dark .card, html.light .pill, html.dark .pill, html.light .btn{border-color:transparent}
+  html.light .pill, html.dark .pill{background:var(--surface)}
+  html.light .w-tip, html.dark .w-tip{background:var(--tint);border-color:transparent;color:var(--tint-text)}
+  html.light .w-tip.warm{background:rgba(166,75,0,.09);color:#7a3700}
+  html.dark .w-tip.warm{background:rgba(255,179,64,.14);color:#ffe1b0}
+  html.light .b-line, html.dark .b-line{background:var(--tint);color:var(--tint-text)}
+  html.light .mm-g span.td, html.dark .mm-g span.td, html.light .m-cell.today .m-n, html.dark .m-cell.today .m-n{color:var(--on-accent)}
+  html.light #toast{background:#1c1c1e;color:#fff;border-color:transparent}
+  html.light #pager i{background:rgba(60,60,67,.25)} html.light #pager i.on{background:rgba(60,60,67,.75)}
+  html.light .sp-bar{background:var(--fill-2)} html.light .sp-pp{background:var(--text);color:var(--surface)}
+  html.light .sp-art{box-shadow:none}
+  html.light .n-item:active, html.light .n-item.sending{background:var(--surface-2)}
+  html.light #eq-banner{background:#fff4e5;border-color:rgba(166,75,0,.45)}
+  html.light #eq-banner, html.dark #eq-banner{box-shadow:none}
+  html.light .q-mag.m4, html.light .q-mag.m5{color:#fff}
+  /* Κάρτα Σύστημα: στην οθόνη 2, κάτω από τον αέρα (εκεί φαίνεται και η κατάσταση του iCloud) */
+  #screen2{grid-template-rows:1fr auto}
+  #screen2 #c-pharm{grid-row:1 / span 2}
+  #screen2 #c-system{display:flex}
+  .sys-list .row small{color:var(--warn);margin-left:.375rem}
 
 </style>
 </head>
 <body class="daily">
-<div id="bg"><div class="bg-img" id="bg-a"></div><div class="bg-img" id="bg-b"></div><div id="bg-shade"></div></div>
 <div id="app">
   <header>
     <div id="clock">--:--</div>
@@ -384,6 +407,7 @@
       <div id="date">&nbsp;</div>
     </div>
     <div class="hd-right">
+      <span class="pill" id="run-pill"></span>
       <span class="pill" id="net-pill"><span class="dot" id="net-dot"></span><span id="net-txt">Wi-Fi</span></span>
       <button class="pill" id="mode-btn" type="button"><span id="mode-ico">☀️</span><span id="mode-txt">Ημερήσια</span></button>
     </div>
@@ -414,11 +438,6 @@
     <section class="card" id="c-pihole">
       <h2>Ad blocker <span class="sp"></span><small id="p-upd"></small></h2>
       <div class="body" id="p-body"><div class="muted">Έλεγχος...</div></div>
-    </section>
-
-    <section class="card" id="c-system">
-      <h2>Σύστημα</h2>
-      <div class="body" id="s-body"></div>
     </section>
 
     <section class="card" id="c-home">
@@ -474,6 +493,10 @@
       <h2>Ποιότητα αέρα <span class="sp"></span><small id="aq-upd"></small></h2>
       <div class="body" id="aq-body"><div class="muted">Φόρτωση...</div></div>
     </section>
+    <section class="card" id="c-system">
+      <h2>Σύστημα</h2>
+      <div class="body" id="s-body"></div>
+    </section>
   </div>
 
   <!-- Οθόνη 3: ημερολόγιο μήνα, από κάτω τα επόμενα (ή της μέρας που πατήθηκε) -->
@@ -493,12 +516,34 @@
       </div>
     </section>
   </div>
+
+  <!-- Οθόνη 4: έξω. Πότισμα, τρέξιμο, αεροπλάνα, σεισμοί (dashboard-outdoor.js) -->
+  <div id="screen4">
+    <section class="card" id="c-garden">
+      <h2>Ποτίζω σήμερα; <span class="sp"></span><small id="g-upd"></small></h2>
+      <div class="body" id="g-body"><div class="muted">Φόρτωση...</div></div>
+    </section>
+    <section class="card" id="c-planes">
+      <h2>Αεροπλάνα από πάνω <small id="pl-count"></small><span class="sp"></span><small id="pl-upd"></small></h2>
+      <div class="body" id="pl-body"><div class="muted">Φορτώνει όταν ανοίγει αυτή η οθόνη...</div></div>
+    </section>
+    <section class="card" id="c-run">
+      <h2>Συνθήκες για τρέξιμο <span class="sp"></span><small id="run-upd"></small></h2>
+      <div class="body" id="run-body"><div class="muted">Φόρτωση...</div></div>
+    </section>
+    <section class="card" id="c-quakes">
+      <h2>Σεισμοί, τελευταίες 7 μέρες <span class="sp"></span><small id="q-upd"></small></h2>
+      <div class="body" id="q-body"><div class="muted">Φόρτωση...</div></div>
+    </section>
+  </div>
 </div>
 <div id="dim"></div>
 <div id="toast"></div>
 
 <!-- Προσωπικές ρυθμίσεις και κλειδιά (δεν ανεβαίνουν στο GitHub). Αν λείπει, η σελίδα δουλεύει με τις προεπιλογές. -->
-<script src="dashboard-config.js"></script>
+<script src="dashboard-config.js?v=20261122"></script>
+<!-- Μυστικά (κλειδί TomTom, link του album iCloud): ξεχωριστό αρχείο, στο .gitignore -->
+<script src="dashboard-secrets.js?v=20261122"></script>
 <script>
 /* =====================================================================
    CONFIG: όλες οι ρυθμίσεις είναι εδώ
@@ -513,6 +558,39 @@ var CONFIG = {
 
   // Νυχτερινό χαμήλωμα οθόνης (βάλε enabled:false για να μην χαμηλώνει)
   NIGHT: { enabled: true, from: "23:30", to: "06:15" },
+
+  // Ψηφιακή κορνίζα: η προεπιλεγμένη οθόνη όλη μέρα (εκτός νύχτας). Ένα άγγιγμα δείχνει το dashboard.
+  FRAME: {
+    enabled: true,
+    photoEverySec: 60,          // αλλαγή φωτογραφίας
+    fadeMs: 1200,               // crossfade
+    idleBackMin: 3,             // επιστροφή στην κορνίζα χωρίς άγγιγμα
+    dashboardAuto: { days: [1,2,3], from: "07:30", to: "08:10" },   // εδώ δείχνει μόνο του το dashboard (ημέρες γραφείου)
+    rainProb: 50,               // "Βροχή από ..." όταν η πιθανότητα φτάνει αυτό το %
+    rainLookHours: 12           // πόσες ώρες μπροστά κοιτάει για βροχή
+  },
+
+  // Φωτογραφίες από κοινόχρηστο album iCloud (το link είναι στο dashboard-secrets.js)
+  ICLOUD: {
+    checkEveryMin: 30,          // έλεγχος για νέες φωτογραφίες
+    minSide: 1280,              // ελάχιστη μεγάλη πλευρά της έκδοσης που κατεβαίνει
+    fitW: 1280, fitH: 800,      // μικραίνουν στο tablet ώστε να καλύπτουν 1280x800
+    quality: 0.86,              // JPEG στην cache
+    retryMin: 5                 // νέα προσπάθεια όταν αποτύχει
+  },
+
+  // Χρόνος διαδρομής με TomTom (το κλειδί είναι στο dashboard-secrets.js). Καμία κλήση εκτός παραθύρου.
+  TRAFFIC: {
+    days: [1,2,3], from: "07:50", to: "08:20",
+    everyMin: 3,
+    maxAlternatives: 2,
+    usualRoad: "Αττική Οδός",   // η συνηθισμένη διαδρομή. Άλλη δείχνεται μόνο αν κερδίζει πάνω από altGainMin
+    altGainMin: 5,
+    delayWarnMin: 5, delayBadMin: 15   // καθυστέρηση: πράσινο έως 5, πορτοκαλί έως 15, μετά κόκκινο
+  },
+
+  // Θέμα: φωτεινό τη μέρα, σκούρο από τη δύση ως την ανατολή (ώρες από Open-Meteo)
+  THEME: { auto: true, fallbackDay: ["07:00", "18:00"] },
 
   // Στάσεις ΟΑΣΑ: ο κωδικός στάσης (StopCode) φαίνεται στην εφαρμογή OASA Telematics
   // ή στο telematics.oasa.gr. Μπορείς να βάλεις πάνω από μία.
@@ -950,20 +1028,16 @@ function renderBus(res){
 }
 
 /* =====================================================================
-   Διαδρομή (χωρίς API, απλά ανοίγει την πλοήγηση)
+   Διαδρομή: μόνο ο χρόνος του TomTom (dashboard-traffic.js). Εκτός του παραθύρου
+   του CONFIG.TRAFFIC η κάρτα κρύβεται (κλάση tr-off).
    ===================================================================== */
 function renderRoute(){
-  var W=CONFIG.WORK, has = W.address || (W.lat && W.lon);
-  if(!has && !DEMO){
-    $("r-body").innerHTML='<div class="r-dest muted">Δεν έχει οριστεί προορισμός.<br><span class="dim" style="font-size:14px">Συμπλήρωσε το CONFIG → WORK.</span></div>';
+  var W=CONFIG.WORK;
+  if(!(W.lat && W.lon) && !DEMO){
+    $("r-body").innerHTML='<div class="r-dest muted">Δεν έχει οριστεί προορισμός.<br><span class="dim" style="font-size:14px">Συμπλήρωσε το CONFIG, WORK (lat, lon).</span></div>';
     return;
   }
-  var dest = (W.lat && W.lon) ? (W.lat+","+W.lon) : (W.address || "Σύνταγμα, Αθήνα");
-  var g="https://www.google.com/maps/dir/?api=1&destination="+encodeURIComponent(dest)+"&travelmode=driving";
-  var z = (W.lat && W.lon) ? "https://waze.com/ul?ll="+W.lat+","+W.lon+"&navigate=yes" : "https://waze.com/ul?q="+encodeURIComponent(dest)+"&navigate=yes";
-  $("r-body").innerHTML =
-    '<div class="r-dest">🏢 <b>'+esc(W.label)+'</b>'+(W.address?'<br><span class="muted">'+esc(W.address)+'</span>':'')+'</div>'+
-    '<div class="r-btns"><a class="btn gmaps" href="'+g+'">🗺️ Google Maps</a><a class="btn waze" href="'+z+'">🚙 Waze</a></div>';
+  $("r-body").innerHTML = '<div id="r-traffic"></div>';
 }
 
 /* =====================================================================
@@ -982,7 +1056,7 @@ function renderSystem(){
   var keys=Object.keys(STATUS);
   keys.forEach(function(k){
     var s=STATUS[k];
-    rows.push('<div class="row"><span class="dot '+(s.ok?"ok":"bad")+'"></span>'+esc(k)+'<span>'+ago(s.t)+'</span></div>');
+    rows.push('<div class="row"><span class="dot '+(s.ok?"ok":"bad")+'"></span>'+esc(k)+(!s.ok&&s.note?'<small>'+esc(s.note)+'</small>':'')+'<span>'+ago(s.t)+'</span></div>');
   });
   var up=Math.round((Date.now()-BOOT)/60000);
   rows.push('<div class="row"><span class="dot"></span>Σε λειτουργία<span>'+(up<60?up+"′":Math.floor(up/60)+" ώρ. "+(up%60)+"′")+'</span></div>');
@@ -1050,37 +1124,6 @@ function demoNews(){
 })();
 </script>
 
-<!-- Λίστα φωτογραφιών: τη γράφει το dashboard-photos-sync.ps1. Αν λείπει, το φόντο μένει απλό. -->
-<script src="dashboard-photos/photos.js"></script>
-<script>
-/* =====================================================================
-   Φωτογραφίες φόντου (ξεχωριστό από το CONFIG και την υπόλοιπη λογική)
-   ===================================================================== */
-var PHOTOS = { folder: "dashboard-photos/", everyMinutes: 10 };
-(function(){
-  var list = (window.DASH_PHOTOS || []).slice();
-  if(!list.length) return;
-  for(var i=list.length-1;i>0;i--){ var j=Math.floor(Math.random()*(i+1)), t=list[i]; list[i]=list[j]; list[j]=t; }
-  var layers=[document.getElementById("bg-a"), document.getElementById("bg-b")], front=0, idx=0, shown=false;
-  function show(){
-    var src = PHOTOS.folder + list[idx % list.length]; idx++;
-    var img = new Image();
-    img.onload = function(){
-      var back = layers[1-front];
-      back.style.backgroundImage = 'url("'+src+'")';
-      back.className = "bg-img on"; layers[front].className = "bg-img";
-      front = 1-front;
-      if(!shown){ shown=true; document.documentElement.className += " photos"; }
-      // αδειάζει την παλιά στρώση μετά το fade, για να μη μένουν δύο εικόνες στη μνήμη
-      var old = layers[1-front]; setTimeout(function(){ if(old.className==="bg-img") old.style.backgroundImage="none"; }, 2000);
-    };
-    img.onerror = function(){ if(list.length>1){ list.splice((idx-1)%list.length,1); } };
-    img.src = src;
-  }
-  show();
-  if(list.length>1) setInterval(show, PHOTOS.everyMinutes*60000);
-})();
-</script>
 
 <script>
 /* =====================================================================
@@ -1217,11 +1260,15 @@ var TELEGRAM = (window.LOCAL && LOCAL.TELEGRAM) || { botToken: "", chatId: "" };
   });
 })();
 </script>
-<div id="pager"><i class="on"></i><i></i><i></i></div>
+<div id="pager"><i class="on"></i><i></i><i></i><i></i></div>
 <div id="nightv"><div id="nv-inner"><div id="nv-clock">--:--</div><div id="nv-date"></div><div id="nv-wx"></div><div id="nv-ph"></div></div></div>
-<script src="dashboard-extras.js"></script>
-<script src="dashboard-calendar.js"></script>
-<script src="dashboard-spotify.js"></script>
-<script src="dashboard-busmap.js"></script>
+<!-- ?v=...: το WebView κρατάει τα .js στην cache. Όταν αλλάζεις ένα αρχείο, άλλαξε το v σε όλες τις γραμμές (π.χ. τη σημερινή ημερομηνία). -->
+<script src="dashboard-extras.js?v=20261122"></script>
+<script src="dashboard-calendar.js?v=20261122"></script>
+<script src="dashboard-spotify.js?v=20261122"></script>
+<script src="dashboard-busmap.js?v=20261122"></script>
+<script src="dashboard-outdoor.js?v=20261122"></script>
+<script src="dashboard-traffic.js?v=20261122"></script>
+<script src="dashboard-frame.js?v=20261122"></script>
 </body>
 </html>

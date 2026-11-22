@@ -1,6 +1,8 @@
 # Προσωπικές ρυθμίσεις και κλειδιά: ΠΟΤΕ στο GitHub
 dashboard/dashboard-config.js
+dashboard/dashboard-secrets.js
 _backup-before-split/
+_backup-before-frame/
 
 # Φωτογραφίες (προσωπικές / τρίτων)
 dashboard/dashboard-photos/

@@ -221,11 +221,11 @@ function drawPharm(stale){
   drawNight();
 }
 
-/* ---------- 3. Οθόνες με σύρσιμο: 0 κύρια, 1 φαρμακεία + αέρας, 2 ημερολόγιο μήνα ---------- */
-var root=document.documentElement, backTimer=null, SCREENS=3, curScreen=0;
+/* ---------- 3. Οθόνες με σύρσιμο: 0 κύρια, 1 φαρμακεία + αέρας, 2 ημερολόγιο μήνα, 3 έξω (dashboard-outdoor.js) ---------- */
+var root=document.documentElement, backTimer=null, SCREENS=4, curScreen=0;
 function setScreen(n){
   n = Math.max(0, Math.min(SCREENS-1, +n||0)); curScreen=n;
-  root.className = root.className.replace(/\s*\bs[23]\b/g,"") + (n ? " s"+(n+1) : "");
+  root.className = root.className.replace(/\s*\bs[2-9]\b/g,"") + (n ? " s"+(n+1) : "");
   var dots=$("pager").children; for(var i=0;i<dots.length;i++) dots[i].className = i===n ? "on" : "";
   clearTimeout(backTimer);
   if(n===1) fitAll();
@@ -312,9 +312,17 @@ function pollTelegram(){
         var up=Math.round((Date.now()-START_T)/60000);
         var msg="✅ Το dashboard τρέχει εδώ και "+(up<60?up+" λεπτά":Math.floor(up/60)+" ώρ. "+(up%60)+" λ.")+"\n🌡️ Έξω: "+t;
         var bat = navigator.getBattery ? navigator.getBattery() : Promise.resolve(null);
-        return bat.then(function(b){ if(b) msg+="\n🔋 Μπαταρία: "+Math.round(b.level*100)+"%"+(b.charging?" (φορτίζει)":""); return tgReply(msg); });
+        return bat.then(function(b){
+          if(b) msg+="\n🔋 Μπαταρία: "+Math.round(b.level*100)+"%"+(b.charging?" (φορτίζει)":"");
+          // γραμμές από άλλα αρχεία (π.χ. φωτογραφίες iCloud): window.statusLines = [function(){ return "κείμενο" }]
+          (window.statusLines||[]).forEach(function(f){ try{ var t=f(); if(t) msg+="\n"+t; }catch(e){} });
+          return tgReply(msg);
+        });
       }
-      if(c!=="start") return tgReply("Εντολές: refresh (ανανέωση), status (κατάσταση)");
+      // εντολές από άλλα αρχεία (π.χ. dashboard-outdoor.js): window.tgCommand(c) επιστρέφει κείμενο ή Promise
+      var ext = typeof window.tgCommand==="function" ? window.tgCommand(c) : null;
+      if(ext) return Promise.resolve(ext).then(function(t){ return t ? tgReply(t) : null; });
+      if(c!=="start") return tgReply("Εντολές: refresh (ανανέωση), status (κατάσταση), πότισμα, τρέξιμο, σεισμοί, αεροπλάνα");
     });
   }).catch(function(){}).then(function(){ tgBusy=false; });
 }
@@ -329,4 +337,5 @@ setInterval(drawNight, 60000);
 // δοκιμή: ?night=1 δείχνει τη νυχτερινή οθόνη, ?screen=2 ή 3 τις άλλες οθόνες
 if(/[?&]night=1/.test(location.search)) setInterval(function(){ if(body.className.indexOf("night")<0) body.className+=" night"; }, 500);
 var mS=/[?&]screen=(\d)/.exec(location.search); if(mS) setScreen(+mS[1]-1);
+window.setScreen = setScreen;   // η κορνίζα (dashboard-frame.js) γυρίζει στην κύρια οθόνη όταν ανοίγει το dashboard
 })();
