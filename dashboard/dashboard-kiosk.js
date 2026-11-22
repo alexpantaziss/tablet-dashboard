@@ -148,6 +148,21 @@ function runUpdate(){
     if(err) done("⚠️ Η ενημέρωση δεν ξεκίνησε: " + err);
   });
 }
+// Αναβάθμιση της ίδιας της εφαρμογής από τα Releases του GitHub (χρειάζεται πάτημα «Εγκατάσταση» στο tablet)
+function runAppUpdate(){
+  if(!U.repo) return Promise.resolve("⬆️ Δεν έχει οριστεί UPDATE_REPO στο dashboard-config.js");
+  return new Promise(function(done){
+    window.kioskOnAppUpdate = function(json){
+      var r = JSON.parse(json);
+      if(!r.ok) done("⚠️ Η αναβάθμιση της εφαρμογής δεν έγινε: " + r.error + ". Μένει η " + r.current + ".");
+      else if(!r.started) done("✅ Η εφαρμογή είναι ήδη στην τελευταία έκδοση (" + r.current + ").");
+      else done("⬆️ Κατέβηκε η έκδοση " + r.latest + " (τώρα " + r.current + ").\nΠάτα «Εγκατάσταση» στο tablet μέσα σε 10 λεπτά. " +
+                "Η εφαρμογή ξανανοίγει μόνη της και θα σου έρθει μήνυμα στην αναφορά.");
+    };
+    var err = K.appUpdate(U.repo);
+    if(err) done("⚠️ Η αναβάθμιση δεν ξεκίνησε: " + err);
+  });
+}
 function runRollback(){
   var list = JSON.parse(K.rollback() || "[]");
   return list.length ? "↩️ Επαναφορά της προηγούμενης έκδοσης: " + list.join(", ") + ". Ξαναφορτώνει."
@@ -226,6 +241,8 @@ window.tgCommand = function(c){
   if(/^(βίντεο|βιντεο|video)$/.test(c)) return sendCapture("video");
   if(/^(update|ενημέρωση|ενημερωση)$/.test(c)) return runUpdate();
   if(/^(rollback|επαναφορά|επαναφορα)$/.test(c)) return runRollback();
+  if(/^(αναβάθμιση|αναβαθμιση|upgrade)$/.test(c))
+    return has("appUpdate") ? runAppUpdate() : "Η αναβάθμιση από απόσταση υπάρχει από την έκδοση 1.3. Αυτή τη φορά χρειάζεται καλώδιο.";
   return prevCmd ? prevCmd(c) : null;
 };
 })();

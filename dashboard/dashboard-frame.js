@@ -76,6 +76,10 @@ var css =
   "#fr-eq{background:rgba(120,60,0,.7)}" +
   ".fr-chip .dot{width:.875rem;height:.875rem}" +
   ".fr-chip .dot.ok{background:#30d158} .fr-chip .dot.warn{background:#ffb340} .fr-chip .dot.bad{border-color:#ff7b72}" +
+  /* κουμπί "επόμενη": δεξιά στη μέση, μεγάλο σημείο αφής (72 px), διακριτικό πάνω στη φωτογραφία */
+  "#fr-next{position:absolute;right:1.25rem;top:50%;width:4.5rem;height:4.5rem;margin-top:-2.25rem;border:0;border-radius:50%;padding:0;" +
+    "background:rgba(0,0,0,.38);color:#fff;font-size:2.75rem;line-height:4.25rem;text-align:center;opacity:.8;-webkit-tap-highlight-color:transparent}" +
+  "#fr-next:active{background:rgba(0,0,0,.6);opacity:1}" +
   "#fr-empty{position:absolute;left:0;right:0;top:40%;text-align:center;color:#98989f;font-size:1.375rem;display:none}" +
   "@media (prefers-reduced-motion:reduce){.fr-layer{transition:none}}";
 var st = document.createElement("style"); st.textContent = css; document.head.appendChild(st);
@@ -85,6 +89,7 @@ fr.innerHTML =
   '<div class="fr-layer" id="fr-a"><div class="fr-side"></div><img alt=""></div>' +
   '<div class="fr-layer" id="fr-b"><div class="fr-side"></div><img alt=""></div>' +
   '<div id="fr-empty"></div>' +
+  '<button id="fr-next" type="button" aria-label="Επόμενη φωτογραφία">&#8250;</button>' +
   '<div id="fr-strip"><div id="fr-chips"><div class="fr-chip" id="fr-car"></div><div class="fr-chip" id="fr-rain"></div><div class="fr-chip" id="fr-eq"></div></div>' +
   '<div id="fr-main"><div id="fr-clock">--:--</div><div class="fr-i" id="fr-wx"></div><div class="fr-i" id="fr-ev"></div></div></div>';
 document.body.appendChild(fr);
@@ -323,6 +328,14 @@ document.addEventListener("touchstart", function(){ lastTouch = Date.now(); }, {
 document.addEventListener("click", function(){ lastTouch = Date.now(); }, true);
 var leftAt = 0;
 fr.addEventListener("click", function(e){ e.stopPropagation(); lastTouch = Date.now(); leftAt = Date.now(); setFrame(false); });
+// "επόμενη": αλλάζει φωτογραφία (με την ανακατεμένη σειρά) χωρίς να κλείσει την κορνίζα,
+// και ο χρόνος ως την επόμενη αυτόματη αλλαγή μετράει από την αρχή
+var nextAt = 0;
+$("fr-next").addEventListener("click", function(e){
+  e.stopPropagation(); lastTouch = Date.now();
+  if(Date.now() - nextAt < 700) return;      // όχι δεύτερη αλλαγή στη μέση του crossfade
+  nextAt = Date.now(); showNext(); rotate(frameOn);
+});
 // το άγγιγμα που κλείνει την κορνίζα δεν πατάει και κάτι από κάτω (διπλό πάτημα, "ghost click")
 document.addEventListener("click", function(e){ if(Date.now() - leftAt < 600 && !fr.contains(e.target)){ e.stopPropagation(); e.preventDefault(); } }, true);
 
