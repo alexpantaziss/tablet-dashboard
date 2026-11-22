@@ -286,7 +286,33 @@ function tgApi(method, params){
   var q=Object.keys(params||{}).map(function(k){ return k+"="+encodeURIComponent(params[k]); }).join("&");
   return fetchT("https://api.telegram.org/bot"+TELEGRAM.botToken+"/"+method+(q?"?"+q:""), {}, 15000).then(function(r){ return r.json(); });
 }
-function tgReply(text){ return tgApi("sendMessage", { chat_id:TELEGRAM.chatId, text:text }).catch(function(){}); }
+// Κουμπιά κάτω από το chat (μένουν μόνιμα). Το κείμενο κάθε κουμπιού είναι η εντολή, με ένα emoji μπροστά.
+// Η επαναφορά και η αναβάθμιση δεν είναι εδώ, για να μην πατηθούν κατά λάθος: είναι στο μενού "/".
+var TG_KEYS = { keyboard: [
+  ["📸 Οθόνη", "📷 Κάμερα", "🎥 Βίντεο"],
+  ["✅ Κατάσταση", "❤️ Υγεία", "🔄 Ανανέωση"],
+  ["🌱 Πότισμα", "🏃 Τρέξιμο", "🌍 Σεισμοί"],
+  ["✈️ Αεροπλάνα", "⬇️ Ενημέρωση", "❓ Βοήθεια"]
+], resize_keyboard: true, is_persistent: true };
+// Το μενού "/" του Telegram δέχεται μόνο λατινικά ονόματα: κάθε όνομα είναι ήδη εντολή που καταλαβαίνει το dashboard.
+var TG_MENU = [
+  ["screenshot", "📸 Φωτογραφία της οθόνης"], ["camera", "📷 Φωτογραφία δωματίου"], ["video", "🎥 Βίντεο δωματίου, 10 δευτ."],
+  ["status", "✅ Κατάσταση dashboard"], ["health", "❤️ Μπαταρία, μνήμη, Wi-Fi του tablet"], ["refresh", "🔄 Ξαναφόρτωμα του dashboard"],
+  ["water", "🌱 Χρειάζεται πότισμα;"], ["run", "🏃 Καιρός για τρέξιμο"], ["quakes", "🌍 Πρόσφατοι σεισμοί"], ["planes", "✈️ Αεροπλάνα από πάνω"],
+  ["update", "⬇️ Νέα έκδοση του dashboard από το GitHub"], ["rollback", "↩️ Επιστροφή στην προηγούμενη έκδοση του dashboard"],
+  ["upgrade", "⬆️ Νέα έκδοση της εφαρμογής (θέλει πάτημα στο tablet)"], ["help", "❓ Όλες οι εντολές"]
+];
+var TG_HELP = "Πάτα ένα κουμπί από κάτω ή γράψε την εντολή:\n" +
+  "📸 οθόνη · 📷 κάμερα · 🎥 βίντεο\n✅ κατάσταση · ❤️ υγεία · 🔄 ανανέωση\n🌱 πότισμα · 🏃 τρέξιμο · 🌍 σεισμοί · ✈️ αεροπλάνα\n" +
+  "⬇️ ενημέρωση (dashboard) · ↩️ επαναφορά · ⬆️ αναβάθμιση (εφαρμογή)\nΌλες υπάρχουν και στο μενού / δίπλα στο πεδίο κειμένου.";
+function tgReply(text){ return tgApi("sendMessage", { chat_id:TELEGRAM.chatId, text:text, reply_markup:JSON.stringify(TG_KEYS) }).catch(function(){}); }
+// Το μενού "/" ορίζεται μία φορά (και ξανά μόνο αν αλλάξει η λίστα)
+function tgSetMenu(){
+  var ver = "m" + TG_MENU.length + "-1";
+  try{ if(localStorage.getItem("hcc_tg_menu") === ver) return; }catch(e){}
+  tgApi("setMyCommands", { commands: JSON.stringify(TG_MENU.map(function(c){ return { command:c[0], description:c[1] }; })) })
+    .then(function(j){ if(j && j.ok) try{ localStorage.setItem("hcc_tg_menu", ver); }catch(e){} }).catch(function(){});
+}
 var tgOffset = 0, tgBusy=false;
 function pollTelegram(){
   if(DEMO || typeof TELEGRAM==="undefined" || !TELEGRAM.botToken || !TELEGRAM.chatId || tgBusy) return;
@@ -298,7 +324,8 @@ function pollTelegram(){
       tgOffset = u.update_id+1;
       var m=u.message; if(!m || String(m.chat.id)!==String(TELEGRAM.chatId) || !m.text) return;
       if(Date.now()/1000 - m.date > 600) return;   // αγνόησε παλιά μηνύματα (π.χ. μετά από reboot)
-      cmds.push(m.text.trim().toLowerCase().replace(/^\//,""));
+      // "📸 Οθόνη" -> "οθόνη", "/screenshot@bot" -> "screenshot"
+      cmds.push(m.text.trim().replace(/^[^A-Za-z0-9Ͱ-Ͽἀ-῿\/]+/, "").replace(/^\//, "").replace(/@\S+$/, "").trim().toLowerCase());
     });
     if(!cmds.length) return;
     // επιβεβαίωση στο Telegram ότι διαβάστηκαν, ώστε να μην ξανατρέξουν μετά το reload
@@ -322,7 +349,7 @@ function pollTelegram(){
       // εντολές από άλλα αρχεία (π.χ. dashboard-outdoor.js): window.tgCommand(c) επιστρέφει κείμενο ή Promise
       var ext = typeof window.tgCommand==="function" ? window.tgCommand(c) : null;
       if(ext) return Promise.resolve(ext).then(function(t){ return t ? tgReply(t) : null; });
-      if(c!=="start") return tgReply("Εντολές: refresh (ανανέωση), status (κατάσταση), screenshot (οθόνη), υγεία, κάμερα, βίντεο, update (ενημέρωση), επαναφορά, αναβάθμιση (της εφαρμογής), πότισμα, τρέξιμο, σεισμοί, αεροπλάνα");
+      return tgReply((/^(βοήθεια|βοηθεια|help|start|εντολές|εντολες)$/.test(c) ? "" : "Δεν την ξέρω αυτή. ") + TG_HELP);
     });
   }).catch(function(){}).then(function(){ tgBusy=false; });
 }
@@ -330,6 +357,7 @@ var START_T = Date.now();
 
 /* ---------- εκκίνηση ---------- */
 setInterval(pollTelegram, TG_CMD_EVERY); setTimeout(pollTelegram, 5000);
+if(!DEMO && typeof TELEGRAM!=="undefined" && TELEGRAM.botToken) setTimeout(tgSetMenu, 8000);
 loadAir(); loadPharm(); drawNight();
 setInterval(loadAir, EXTRA.airEveryMin*60000);
 setInterval(loadPharm, EXTRA.pharmEveryMin*60000);
