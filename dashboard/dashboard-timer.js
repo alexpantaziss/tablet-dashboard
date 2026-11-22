@@ -14,6 +14,8 @@ var KEY = "hcc_timer";
 
 var css =
   "#tm-pill .tm-t{font-variant-numeric:tabular-nums;font-weight:600}" +
+  ".tm-ico{width:1.5rem;height:1.5rem;flex:0 0 auto} #tm-badge .tm-ico{width:1.75rem;height:1.75rem}" +
+  "#tm-pill.idle{padding:0;width:3rem;justify-content:center}" +
   "#tm-pill.run{background:var(--tint);color:var(--tint-text);border-color:transparent}" +
   "#tm-pill.ring{background:var(--bad);color:#fff;border-color:transparent}" +
   "#tm-badge{position:fixed;top:1rem;right:1rem;z-index:8;display:none;align-items:center;gap:.5rem;padding:.5rem 1.125rem;border-radius:999px;" +
@@ -43,9 +45,13 @@ var st = document.createElement("style"); st.textContent = css; document.head.ap
 // Κουμπί στην πάνω μπάρα, πριν από το «Ημερήσια»
 var pill = document.createElement("button");
 pill.type = "button"; pill.className = "pill"; pill.id = "tm-pill"; pill.setAttribute("aria-label", "Χρονόμετρο κουζίνας");
-pill.innerHTML = '<span aria-hidden="true">⏲️</span><span class="tm-t"></span>';
-var mode = document.getElementById("mode-btn");
-if(mode && mode.parentNode) mode.parentNode.insertBefore(pill, mode);
+// εικονίδιο ρολογιού (σχέδιο, όχι emoji, ώστε να έχει το χρώμα του κειμένου). Όσο μετράει, δίπλα η αντίστροφη μέτρηση.
+var ICON = '<svg class="tm-ico" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="13.5" r="8" fill="none" stroke="currentColor" stroke-width="2"/>' +
+  '<path d="M12 9v4.5l3 2M9.5 2.5h5M12 2.5v3" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+pill.innerHTML = ICON + '<span class="tm-t"></span>';
+// αμέσως μετά την κουκκίδα σύνδεσης
+var net = document.getElementById("net-pill");
+if(net && net.parentNode) net.parentNode.insertBefore(pill, net.nextSibling);
 
 var badge = document.createElement("button");
 badge.type = "button"; badge.id = "tm-badge"; badge.setAttribute("aria-label", "Χρονόμετρο κουζίνας");
@@ -90,7 +96,8 @@ function draw(){
   pill.querySelector(".tm-t").textContent = S.ringing ? "Τέλος!" : show ? fmt(r) : "";
   pill.classList.toggle("run", show && !S.ringing);
   pill.classList.toggle("ring", S.ringing);
-  badge.textContent = "⏲️ " + (S.ringing ? "Τέλος!" : fmt(r) + (paused ? " ⏸" : ""));
+  pill.classList.toggle("idle", !show);
+  badge.innerHTML = ICON + "<span>" + (S.ringing ? "Τέλος!" : fmt(r) + (paused ? " ⏸" : "")) + "</span>";
   badge.classList.toggle("on", show);
 }
 
