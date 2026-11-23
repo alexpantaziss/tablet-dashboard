@@ -223,8 +223,11 @@ function drawPharm(stale){
 
 /* ---------- 3. Οθόνες με σύρσιμο: 0 κύρια, 1 φαρμακεία + αέρας, 2 ημερολόγιο μήνα, 3 έξω (dashboard-outdoor.js) ---------- */
 var root=document.documentElement, backTimer=null, SCREENS=4, curScreen=0;
+function locked(){ return /\bcommute\b/.test(document.body.className); }   // πρωινή γραφείου: μόνο η κύρια οθόνη
 function setScreen(n){
-  n = Math.max(0, Math.min(SCREENS-1, +n||0)); curScreen=n;
+  n = Math.max(0, Math.min(SCREENS-1, +n||0));
+  if(locked()) n = 0;
+  curScreen=n;
   root.className = root.className.replace(/\s*\bs[2-9]\b/g,"") + (n ? " s"+(n+1) : "");
   var dots=$("pager").children; for(var i=0;i<dots.length;i++) dots[i].className = i===n ? "on" : "";
   clearTimeout(backTimer);
@@ -240,12 +243,14 @@ document.addEventListener("touchstart", function(e){ var t=e.touches[0]; sx=t.cl
 document.addEventListener("touchend", function(e){
   var t=e.changedTouches[0], dx=t.clientX-sx, dy=t.clientY-sy;
   if(Date.now()-st>800 || Math.abs(dx)<90 || Math.abs(dy)>Math.abs(dx)*0.6) return;
+  if(locked()) return;
   if(/\bmap-open\b/.test(root.className)) return;   // στον χάρτη λεωφορείων το σύρσιμο μετακινεί τον χάρτη
   if(body.className.indexOf("night")>=0 && !/\bawake\b/.test(root.className)) return;
   setScreen(curScreen + (dx<0 ? 1 : -1));
 }, {passive:true});
 var body=document.body;
 $("pager").addEventListener("click", function(e){
+  if(locked()) return;
   var i=[].indexOf.call(this.children, e.target);
   setScreen(i>=0 && i!==curScreen ? i : (curScreen+1)%SCREENS);
 });
@@ -299,17 +304,19 @@ var TG_MENU = [
   ["screenshot", "📸 Φωτογραφία της οθόνης"], ["camera", "📷 Φωτογραφία δωματίου"], ["video", "🎥 Βίντεο δωματίου, 10 δευτ."],
   ["status", "✅ Κατάσταση dashboard"], ["health", "❤️ Μπαταρία, μνήμη, Wi-Fi του tablet"], ["refresh", "🔄 Ξαναφόρτωμα του dashboard"],
   ["water", "🌱 Χρειάζεται πότισμα;"], ["run", "🏃 Καιρός για τρέξιμο"], ["quakes", "🌍 Πρόσφατοι σεισμοί"], ["planes", "✈️ Αεροπλάνα από πάνω"],
+  ["timer", "⏱ Αντίστροφη μέτρηση: timer 10 (λεπτά), timer stop"],
   ["update", "⬇️ Νέα έκδοση του dashboard από το GitHub"], ["rollback", "↩️ Επιστροφή στην προηγούμενη έκδοση του dashboard"],
   ["upgrade", "⬆️ Νέα έκδοση της εφαρμογής (θέλει πάτημα στο tablet)"], ["help", "❓ Όλες οι εντολές"]
 ];
 var TG_HELP = "Πάτα ένα κουμπί από κάτω ή γράψε την εντολή:\n" +
   "📸 οθόνη · 📷 κάμερα · 🎥 βίντεο\n✅ κατάσταση · ❤️ υγεία · 🔄 ανανέωση\n🌱 πότισμα · 🏃 τρέξιμο · 🌍 σεισμοί · ✈️ αεροπλάνα\n" +
+  "⏱ timer 10 (αντίστροφη μέτρηση 10 λεπτών) · timer stop\n" +
   "⬇️ ενημέρωση (dashboard) · ↩️ επαναφορά · ⬆️ αναβάθμιση (εφαρμογή)\nΌλες υπάρχουν και στο μενού / δίπλα στο πεδίο κειμένου." +
   (window.SECRETS && SECRETS.GEMINI_KEY && window.CONFIG && CONFIG.AI && CONFIG.AI.telegram ?"\n🤖 Ό,τι άλλο γράψεις, απαντά το Gemini. «ξέχνα» = νέα συζήτηση." : "");
 function tgReply(text){ return tgApi("sendMessage", { chat_id:TELEGRAM.chatId, text:text, reply_markup:JSON.stringify(TG_KEYS) }).catch(function(){}); }
 // Το μενού "/" ορίζεται μία φορά (και ξανά μόνο αν αλλάξει η λίστα)
 function tgSetMenu(){
-  var ver = "m" + TG_MENU.length + "-1";
+  var ver = "m" + TG_MENU.length + "-2";
   try{ if(localStorage.getItem("hcc_tg_menu") === ver) return; }catch(e){}
   tgApi("setMyCommands", { commands: JSON.stringify(TG_MENU.map(function(c){ return { command:c[0], description:c[1] }; })) })
     .then(function(j){ if(j && j.ok) try{ localStorage.setItem("hcc_tg_menu", ver); }catch(e){} }).catch(function(){});

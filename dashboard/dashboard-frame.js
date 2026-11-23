@@ -5,7 +5,7 @@
    - Φωτογραφίες σε πλήρη οθόνη, μία κάθε FRAME.photoEverySec, με απλό crossfade. Χωρίς zoom, χωρίς συνεχή κίνηση.
    - Κάτω λωρίδα: ρολόι, θερμοκρασία, επόμενο γεγονός. Μόνο όταν χρειάζεται: βροχή, σεισμός, χρόνος διαδρομής.
    - Ένα άγγιγμα δείχνει το dashboard. Μετά από FRAME.idleBackMin λεπτά χωρίς άγγιγμα γυρίζει στην κορνίζα.
-   - Στο FRAME.dashboardAuto (π.χ. Δευ-Τετ 07:30-08:10) δείχνει μόνο του το dashboard. Η νύχτα μένει όπως ήταν.
+   - Στο CONFIG.COMMUTE (π.χ. Δευ-Τετ 07:30-08:10) δείχνει μόνο του το dashboard και δεν γυρίζει στην κορνίζα. Η νύχτα μένει όπως ήταν.
    Φωτογραφίες iCloud (κοινόχρηστο album, νέα μορφή link photos.icloud.com/shared/album/<token>)
    - Το tablet ρωτάει απευθείας το CloudKit της Apple, όπως η σελίδα του album: resolve (προσωρινό token 20 λεπτών),
      μετά query για τη λίστα. Κάθε φωτογραφία κατεβαίνει στη μικρότερη έκδοση με μεγάλη πλευρά τουλάχιστον ICLOUD.minSide,
@@ -74,6 +74,7 @@ var css =
     ".fr-chip{font-size:1.625rem;font-weight:600;padding:.375rem 1rem;border-radius:999px;background:rgba(0,0,0,.42);white-space:nowrap;display:flex;align-items:center;gap:.5rem}" +
   ".fr-chip:empty{display:none}" +
   "#fr-eq{background:rgba(120,60,0,.7)}" +
+  "#fr-tm{font-variant-numeric:tabular-nums} #fr-tm.ring{background:rgba(196,0,26,.78)}" +
   ".fr-chip .dot{width:.875rem;height:.875rem}" +
   ".fr-chip .dot.ok{background:#30d158} .fr-chip .dot.warn{background:#ffb340} .fr-chip .dot.bad{border-color:#ff7b72}" +
   /* κουμπί "επόμενη": δεξιά στη μέση, μεγάλο σημείο αφής (72 px), διακριτικό πάνω στη φωτογραφία */
@@ -90,7 +91,7 @@ fr.innerHTML =
   '<div class="fr-layer" id="fr-b"><div class="fr-side"></div><img alt=""></div>' +
   '<div id="fr-empty"></div>' +
   '<button id="fr-next" type="button" aria-label="Επόμενη φωτογραφία">&#8250;</button>' +
-  '<div id="fr-strip"><div id="fr-chips"><div class="fr-chip" id="fr-car"></div><div class="fr-chip" id="fr-rain"></div><div class="fr-chip" id="fr-eq"></div></div>' +
+  '<div id="fr-strip"><div id="fr-chips"><div class="fr-chip" id="fr-car"></div><div class="fr-chip" id="fr-rain"></div><div class="fr-chip" id="fr-eq"></div><div class="fr-chip" id="fr-tm"></div></div>' +
   '<div id="fr-main"><div id="fr-clock">--:--</div><div class="fr-i" id="fr-wx"></div><div class="fr-i" id="fr-ev"></div></div></div>';
 document.body.appendChild(fr);
 
@@ -299,7 +300,7 @@ function updateEmpty(){
    ===================================================================== */
 var lastTouch = Date.now(), frameOn = false;
 function isNight(){ return document.body.className.indexOf("night") >= 0; }
-function autoDash(d){ var A = F.dashboardAuto; d = d || new Date(); return !!A && (A.days || []).indexOf(d.getDay()) >= 0 && inWindow(A.from, A.to, d); }
+function autoDash(d){ var A = CONFIG.COMMUTE || F.dashboardAuto; d = d || new Date(); return !!A && (A.days || []).indexOf(d.getDay()) >= 0 && inWindow(A.from, A.to, d); }
 function setFrame(on){
   if(on === frameOn) return;
   frameOn = on;
@@ -367,7 +368,10 @@ function stripDraw(){
   $("fr-car").innerHTML = tr ? '<span class="dot ' + tr.cls + '"></span>🚗 ' + tr.min + ' λεπ.' : "";
   var q = window.eqNow ? eqNow() : null;
   $("fr-eq").textContent = q ? "⚠️ " + eqFmt(q) : "";
-  $("fr-chips").className = (tr || q || $("fr-rain").textContent) ? "has" : "";
+  // χρονόμετρο: το κείμενο το γράφει κάθε δευτερόλεπτο το dashboard-timer.js (window.timerNow)
+  var tm = window.timerNow ? timerNow() : "";
+  $("fr-tm").innerHTML = tm;
+  $("fr-chips").className = (tr || q || tm || $("fr-rain").textContent) ? "has" : "";
 }
 window.frameRefresh = function(){ if(frameOn) stripDraw(); };
 

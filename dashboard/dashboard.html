@@ -84,6 +84,13 @@
   /* Πρωινή: καιρός | λεωφορεία | διαδρομή, coffee corner, ειδήσεις */
   body.morning main{grid-template-columns:1fr 1.12fr 1fr;grid-template-rows:auto auto 1fr;
     grid-template-areas:"weather bus route" "weather bus coffee" "weather bus news"}
+  /* Πρωινή γραφείου: μία σταθερή οθόνη. Διαδρομή πάνω αριστερά (το πρώτο που κοιτάς), από κάτω η μέρα,
+     στη μέση ο καιρός, δεξιά οι ειδήσεις. Χωρίς λεωφορεία, coffee corner, Spotify και τελείες σελίδων. */
+  body.commute main{grid-template-columns:1.2fr 1fr 1fr;grid-template-rows:auto 1fr;
+    grid-template-areas:"route weather news" "vpn weather news"}
+  body.commute #c-bus, body.commute #c-coffee, body.commute #c-spot, body.commute #c-pihole, body.commute #c-home{display:none !important}
+  body.commute #pager, body.commute #mode-btn, body.commute #run-pill{display:none !important}
+  body.commute #cal-mini{display:none}
   #c-weather{grid-area:weather} #c-news{grid-area:news} #c-vpn{grid-area:vpn}
   /* Ημερολόγιο στη θέση του VPN. Το VPN κρύβεται, ο κώδικάς του μένει. */
   #c-cal{grid-area:vpn} #c-vpn{display:none !important} body.morning #c-cal{display:none}
@@ -559,6 +566,10 @@ var CONFIG = {
   // Πρωινή λειτουργία: ημέρες (1=Δευτέρα ... 5=Παρασκευή, 6=Σάββατο, 0=Κυριακή) και ώρες
   MORNING: { days: [1,2,3,4,5], from: "06:30", to: "09:30" },
 
+  // Πρωινή οθόνη γραφείου: μία σταθερή οθόνη με τη διαδρομή στη θέση των λεωφορείων.
+  // Χωρίς σύρσιμο, χωρίς τελείες σελίδων και χωρίς επιστροφή στην κορνίζα. Έχει προτεραιότητα από το MORNING.
+  COMMUTE: { days: [1,2,3], from: "07:30", to: "08:10" },
+
   // Νυχτερινό χαμήλωμα οθόνης (βάλε enabled:false για να μην χαμηλώνει)
   NIGHT: { enabled: true, from: "23:30", to: "06:15" },
 
@@ -568,7 +579,7 @@ var CONFIG = {
     photoEverySec: 60,          // αλλαγή φωτογραφίας
     fadeMs: 1200,               // crossfade
     idleBackMin: 3,             // επιστροφή στην κορνίζα χωρίς άγγιγμα
-    dashboardAuto: { days: [1,2,3], from: "07:30", to: "08:10" },   // εδώ δείχνει μόνο του το dashboard (ημέρες γραφείου)
+    // στις ώρες του COMMUTE δείχνει μόνο του το dashboard (πρωινή οθόνη γραφείου)
     rainProb: 50,               // "Βροχή από ..." όταν η πιθανότητα φτάνει αυτό το %
     rainLookHours: 12           // πόσες ώρες μπροστά κοιτάει για βροχή
   },
@@ -583,11 +594,15 @@ var CONFIG = {
   },
 
   // Χρόνος διαδρομής με TomTom (το κλειδί είναι στο dashboard-secrets.js). Καμία κλήση εκτός παραθύρου.
-  TRAFFIC: {
-    days: [1,2,3], from: "07:50", to: "08:20",
+  // Κύρια διαδρομή χωρίς διόδια. Μετά το τέλος του COMMUTE ο χρόνος μένει στη λωρίδα της κορνίζας.
+  TOMTOM: {
+    days: [1,2,3], from: "07:30", to: "08:20",
     everyMin: 3,
+    avoidTolls: true,           // κύρια διαδρομή: avoid=tollRoads
+    compareTolls: true,         // δεύτερη κλήση με διόδια και μικρή γραμμή σύγκρισης (false = καμία δεύτερη κλήση)
+    tollGainMin: 10,            // η γραμμή τονίζεται όταν τα διόδια κερδίζουν πάνω από τόσα λεπτά
     maxAlternatives: 2,
-    usualRoad: "Αττική Οδός",   // η συνηθισμένη διαδρομή. Άλλη δείχνεται μόνο αν κερδίζει πάνω από altGainMin
+    usualRoad: "",              // η συνηθισμένη διαδρομή (κενό = η πιο γρήγορη). Άλλη δείχνεται μόνο αν κερδίζει πάνω από altGainMin
     altGainMin: 5,
     delayWarnMin: 5, delayBadMin: 15   // καθυστέρηση: πράσινο έως 5, πορτοκαλί έως 15, μετά κόκκινο
   },
@@ -611,9 +626,10 @@ var CONFIG = {
     reportDownMin: 60,       // ειδοποίηση αν μια πηγή (ΟΑΣΑ, καιρός...) δεν απαντά τόσα λεπτά
     quietAtNight: true       // τη νύχτα οι αναφορές έρχονται χωρίς ήχο ειδοποίησης
   },
-  // Χρονόμετρο κουζίνας (dashboard-timer.js): κουμπί ⏲️ στην πάνω μπάρα
-  // ringMin: πόσα λεπτά χτυπάει αν δεν πατήσεις «Εντάξει». telegram: true = και μήνυμα στο Telegram στο τέλος
-  TIMER: { presets: [1, 3, 5, 10, 15, 20, 30, 45, 60, 90], ringMin: 3, volume: 0.5, telegram: false },
+  // Χρονόμετρο (dashboard-timer.js): κουμπί ⏱ πάνω δεξιά. Αντίστροφη μέτρηση και χρονόμετρο με γύρους.
+  // ringSec: πόσα δευτερόλεπτα χτυπάει στο τέλος (σταματά νωρίτερα με ένα άγγιγμα). flash: η οθόνη αναβοσβήνει απαλά.
+  // telegram: true = μήνυμα «⏱ Τέλος» και όταν το ξεκίνησες από την οθόνη (όταν ξεκινά από το Telegram, στέλνει πάντα)
+  TIMER: { presets: [1, 3, 5, 10, 15, 30], ringSec: 30, volume: 0.5, flash: true, telegram: false },
   // Συνομιλία με το Gemini στο Telegram (dashboard-ai.js). Κλειδί: GEMINI_KEY στο dashboard-secrets.js.
   // model: κενό = το νεότερο "flash" της Google. memoryMin: πόσα λεπτά θυμάται τη συζήτηση.
   // telegram: false = στο Telegram μόνο εντολές, χωρίς AI (για να μην ξοδεύονται tokens)
@@ -734,22 +750,31 @@ function fetchJSON(url){ return fetchText(url).then(function(t){ return JSON.par
    Ρολόι, χαιρετισμός, λειτουργίες
    ===================================================================== */
 var manualMode = null, manualUntil = 0;
+function inCommute(d){
+  var C=CONFIG.COMMUTE; d=d||new Date();
+  return !!C && (C.days||[]).indexOf(d.getDay())>=0 && inWindow(C.from, C.to, d);
+}
 function autoMode(d){
+  if(inCommute(d)) return "commute";
   return (CONFIG.MORNING.days.indexOf(d.getDay())>=0 && inWindow(CONFIG.MORNING.from, CONFIG.MORNING.to, d)) ? "morning" : "daily";
 }
 function currentMode(){
+  // η πρωινή γραφείου δεν αλλάζει με το κουμπί (το κουμπί κρύβεται). ?mode=commute μόνο για δοκιμή.
+  if(manualMode==="commute" && Date.now()<manualUntil) return manualMode;
+  if(inCommute()){ manualMode=null; return "commute"; }
   if(manualMode && Date.now()<manualUntil) return manualMode;
   manualMode=null; return autoMode(new Date());
 }
 function applyMode(){
   var m=currentMode();
-  var want = m==="morning" ? "morning" : "daily";
+  var want = m==="commute" ? "commute" : m==="morning" ? "morning" : "daily";
   var night = CONFIG.NIGHT.enabled && inWindow(CONFIG.NIGHT.from, CONFIG.NIGHT.to, new Date());
   var cls = want + (night?" night":"");
   if(document.body.className!==cls){
     var wasMorning = /morning/.test(document.body.className);
     document.body.className=cls;
     if(want==="morning" && !wasMorning){ loadBus(); }
+    if(want==="commute" && window.setScreen) setScreen(0);   // μία οθόνη: πάντα η κύρια
   }
   $("mode-ico").textContent = want==="morning" ? "🌅" : "☀️";
   $("mode-txt").textContent = (want==="morning" ? "Πρωινή" : "Ημερήσια") + (manualMode ? " · χειροκίνητα" : "");
@@ -1062,7 +1087,7 @@ function renderBus(res){
 
 /* =====================================================================
    Διαδρομή: μόνο ο χρόνος του TomTom (dashboard-traffic.js). Εκτός του παραθύρου
-   του CONFIG.TRAFFIC η κάρτα κρύβεται (κλάση tr-off).
+   του CONFIG.TOMTOM η κάρτα κρύβεται (κλάση tr-off).
    ===================================================================== */
 function renderRoute(){
   var W=CONFIG.WORK;
@@ -1133,7 +1158,7 @@ function demoNews(){
    ===================================================================== */
 (function start(){
   if(DEMO){
-    var dm=location.search.match(/mode=(morning|daily)/);
+    var dm=location.search.match(/mode=(morning|daily|commute)/);
     if(dm){ manualMode=dm[1]; manualUntil=Date.now()+86400000; }
     STATUS={"Καιρός":{ok:true,t:Date.now()-60000},"Ειδήσεις":{ok:true,t:Date.now()-120000},"VPN έλεγχος":{ok:true,t:Date.now()-60000},"ΟΑΣΑ":{ok:true,t:Date.now()-30000}};
   }
@@ -1295,7 +1320,7 @@ var TELEGRAM = (window.LOCAL && LOCAL.TELEGRAM) || { botToken: "", chatId: "" };
 })();
 </script>
 <div id="pager"><i class="on"></i><i></i><i></i><i></i></div>
-<div id="nightv"><div id="nv-inner"><div id="nv-clock">--:--</div><div id="nv-date"></div><div id="nv-wx"></div><div id="nv-ph"></div></div></div>
+<div id="nightv"><div id="nv-inner"><div id="nv-clock">--:--</div><div id="nv-date"></div><div id="nv-wx"></div><div id="nv-ph"></div><div id="nv-tm"></div></div></div>
 <!-- ?v=...: το WebView κρατάει τα .js στην cache. Όταν αλλάζεις ένα αρχείο, άλλαξε το v σε όλες τις γραμμές (π.χ. τη σημερινή ημερομηνία). -->
 <script src="dashboard-extras.js?v=20261122h"></script>
 <script src="dashboard-calendar.js?v=20261122h"></script>
